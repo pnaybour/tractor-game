@@ -63,6 +63,27 @@ http://127.0.0.1:5173
 
 Press any key once the page opens. Browsers generally require a user gesture before audio can start, so the music and sounds begin after the first input.
 
+## GitHub Pages
+
+This repo is ready for GitHub Pages as a static site served from the `main` branch.
+
+Expected Pages URL:
+
+```text
+https://pnaybour.github.io/tractor-game/
+```
+
+To enable it in GitHub:
+
+1. Open the repository settings.
+2. Go to **Pages**.
+3. Set **Build and deployment** to **Deploy from a branch**.
+4. Choose branch `main`.
+5. Choose folder `/ (root)`.
+6. Click **Save**.
+
+The `.nojekyll` file keeps GitHub Pages in simple static-file mode. All browser asset paths are relative, so the game works correctly from the `/tractor-game/` project path used by GitHub Pages.
+
 ## Development
 
 Install the test dependency:
@@ -86,6 +107,7 @@ The Playwright tests check keyboard play, button play, horse feeding, and digger
 ├── index.html                # Game markup
 ├── styles.css                # Farm, digger, horse, and responsive visual styling
 ├── game.js                   # Gameplay loop, input handling, animation timing, and audio
+├── .nojekyll                 # Keeps GitHub Pages in static-file mode
 ├── assets/sounds/            # Local sound effects
 ├── tests/digger.spec.mjs     # Playwright tests
 ├── playwright.config.mjs     # Desktop and mobile test configuration
