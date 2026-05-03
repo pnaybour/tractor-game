@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Green Digger Carrots</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="game" aria-label="Green digger carrot game">
+      <section class="sky" aria-hidden="true">
+        <div class="cloud cloud-one"></div>
+        <div class="cloud cloud-two"></div>
+        <div class="sun"></div>
+      </section>
+
+      <section class="playfield" aria-live="polite">
+        <div class="scoreboard">
+          <div class="brand">Green Digger</div>
+          <div class="carrot-meter" aria-label="Carrots fed to the horse">
+            <span class="meter-label">Carrots</span>
+            <div class="meter-dots" data-testid="carrot-dots"></div>
+            <span class="meter-count" data-testid="carrot-count">0/5</span>
+          </div>
+        </div>
+
+        <div class="message" data-testid="message">Ready to dig</div>
+
+        <div class="world" data-testid="world">
+          <div class="farm-backdrop" aria-hidden="true">
+            <div class="hill hill-one"></div>
+            <div class="hill hill-two"></div>
+            <div class="fence"></div>
+            <div class="field-rows"></div>
+          </div>
+
+          <div class="field field-left">
+            <div class="soil-mound" data-patch="0">
+              <div class="sprout"></div>
+            </div>
+            <div class="soil-mound" data-patch="1">
+              <div class="sprout"></div>
+            </div>
+            <div class="soil-mound" data-patch="2">
+              <div class="sprout"></div>
+            </div>
+            <div class="soil-mound" data-patch="3">
+              <div class="sprout"></div>
+            </div>
+            <div class="soil-mound" data-patch="4">
+              <div class="sprout"></div>
+            </div>
+          </div>
+
+          <div class="track"></div>
+
+          <div class="digger" data-testid="digger" aria-label="Green digger">
+            <div class="exhaust"></div>
+            <div class="digger-arm">
+              <div class="hydraulic hydraulic-top"></div>
+              <div class="hydraulic hydraulic-bottom"></div>
+              <div class="bucket"></div>
+            </div>
+            <div class="digger-cab">
+              <div class="window"></div>
+            </div>
+            <div class="digger-body">
+              <div class="headlight"></div>
+              <div class="grille"></div>
+            </div>
+            <div class="tread">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <div class="carried-carrot" data-testid="carried-carrot">
+              <div class="carrot-top"></div>
+              <div class="carrot-root"></div>
+            </div>
+          </div>
+
+          <div class="horse-zone">
+            <div class="trough">
+              <div class="trough-carrots" data-testid="trough-carrots"></div>
+            </div>
+            <div class="horse" data-testid="horse" aria-label="Happy horse">
+              <div class="tail"></div>
+              <div class="body"></div>
+              <div class="neck"></div>
+              <div class="head">
+                <div class="ear ear-one"></div>
+                <div class="ear ear-two"></div>
+                <div class="eye"></div>
+                <div class="nostril"></div>
+                <div class="smile"></div>
+              </div>
+              <div class="mane"></div>
+              <div class="leg leg-one"></div>
+              <div class="leg leg-two"></div>
+              <div class="leg leg-three"></div>
+              <div class="leg leg-four"></div>
+            </div>
+          </div>
+        </div>
+
+        <button class="big-action" type="button" data-testid="action-button" aria-label="Do the next digger action">
+          Go
+        </button>
+      </section>
+    </main>
+
+    <script src="game.js"></script>
+  </body>
+</html>
