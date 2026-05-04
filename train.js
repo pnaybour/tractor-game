@@ -10,10 +10,15 @@ const state = {
   angle: -Math.PI / 2,
   audioContext: null,
   boostGlow: 0,
+  chimneyTimer: 0,
+  chimneyWidth: 0,
+  chimneyX: null,
+  chimneyY: null,
   chuffProgress: 0,
   driverContext: null,
   lastFrame: 0,
   mapContext: null,
+  particles: [],
   speed: 0,
 };
 
@@ -177,6 +182,176 @@ function strokePath(context, points, width, color, lineCap = "round") {
   context.restore();
 }
 
+function spawnSmokePuff() {
+  if (state.chimneyX === null) {
+    return;
+  }
+
+  const baseSize = state.chimneyWidth || 12;
+  const speedFactor = 0.6 + state.speed / MAX_SPEED;
+
+  state.particles.push({
+    growth: baseSize * (0.9 + Math.random() * 0.6),
+    life: 0,
+    maxLife: 1.4 + Math.random() * 0.7,
+    radius: baseSize * (0.45 + Math.random() * 0.3),
+    shade: 215 + Math.floor(Math.random() * 30),
+    vx: (Math.random() - 0.5) * baseSize * 1.4,
+    vy: -baseSize * (1.4 + Math.random() * 0.9) * speedFactor,
+    x: state.chimneyX + (Math.random() - 0.5) * baseSize * 0.4,
+    y: state.chimneyY,
+  });
+}
+
+function updateSmoke(deltaSeconds) {
+  for (let index = state.particles.length - 1; index >= 0; index -= 1) {
+    const particle = state.particles[index];
+    particle.life += deltaSeconds;
+    particle.x += particle.vx * deltaSeconds;
+    particle.y += particle.vy * deltaSeconds;
+    particle.vy *= 0.985;
+    particle.vx += (Math.random() - 0.5) * particle.radius * 0.05;
+    particle.radius += particle.growth * deltaSeconds;
+
+    if (particle.life >= particle.maxLife) {
+      state.particles.splice(index, 1);
+    }
+  }
+}
+
+function drawSmoke(context) {
+  state.particles.forEach((particle) => {
+    const lifeFraction = particle.life / particle.maxLife;
+    const alpha = (1 - lifeFraction) * 0.6;
+    const shade = particle.shade;
+    context.fillStyle = `rgba(${shade}, ${shade}, ${shade}, ${alpha})`;
+    context.beginPath();
+    context.arc(particle.x, particle.y, particle.radius, 0, TAU);
+    context.fill();
+  });
+}
+
+function drawClouds(context, width, height) {
+  const clouds = [
+    { angle: 0.4, baseY: 0.10, scale: 1.0 },
+    { angle: 1.7, baseY: 0.16, scale: 1.3 },
+    { angle: 3.0, baseY: 0.07, scale: 0.85 },
+    { angle: 4.4, baseY: 0.13, scale: 1.1 },
+    { angle: 5.6, baseY: 0.18, scale: 0.95 },
+  ];
+
+  clouds.forEach((cloud) => {
+    const offset = Math.sin(cloud.angle - state.angle * 0.45);
+    const depth = 0.4 + 0.6 * Math.cos(cloud.angle - state.angle * 0.45);
+    const x = width * (0.5 + offset * 0.55);
+    const y = height * cloud.baseY;
+    const size = width * 0.05 * cloud.scale * (0.6 + depth * 0.6);
+    const alpha = 0.55 + depth * 0.35;
+
+    context.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+    context.beginPath();
+    context.arc(x - size * 0.85, y + size * 0.05, size * 0.55, 0, TAU);
+    context.arc(x - size * 0.2, y - size * 0.25, size * 0.7, 0, TAU);
+    context.arc(x + size * 0.55, y - size * 0.05, size * 0.6, 0, TAU);
+    context.arc(x + size * 0.95, y + size * 0.1, size * 0.45, 0, TAU);
+    context.arc(x + size * 0.1, y + size * 0.18, size * 0.5, 0, TAU);
+    context.fill();
+  });
+}
+
+function pseudoRandom(seed) {
+  const value = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
+  return value - Math.floor(value);
+}
+
+function drawBallast(context, width, height) {
+  for (let index = 0; index <= 30; index += 1) {
+    const progress = (index + 0.5) / 30;
+    const point = getDriverTrackPoint(width, height, progress);
+    const halfWidth = point.railGap * 0.5;
+    const dotCount = 4 + Math.round(progress * 5);
+
+    for (let dot = 0; dot < dotCount; dot += 1) {
+      const seedBase = index * 11 + dot * 3;
+      const offsetX = (pseudoRandom(seedBase) - 0.5) * halfWidth * 1.7;
+      const offsetY = (pseudoRandom(seedBase + 17) - 0.5) * lerp(height * 0.004, height * 0.022, progress);
+      const dotSize = lerp(width * 0.0028, width * 0.011, progress) * (0.6 + pseudoRandom(seedBase + 37) * 0.7);
+      const shade = 95 + Math.floor(pseudoRandom(seedBase + 53) * 60);
+      context.fillStyle = `rgba(${shade}, ${shade - 18}, ${shade - 30}, 0.55)`;
+      context.beginPath();
+      context.arc(point.centerX + offsetX, point.y + offsetY, dotSize, 0, TAU);
+      context.fill();
+    }
+  }
+}
+
+function drawWheel(context, x, y, radius) {
+  context.fillStyle = "#1c1410";
+  context.beginPath();
+  context.arc(x, y, radius, 0, TAU);
+  context.fill();
+
+  context.fillStyle = "#3a2a20";
+  context.beginPath();
+  context.arc(x, y, radius * 0.78, 0, TAU);
+  context.fill();
+
+  context.save();
+  context.translate(x, y);
+  context.rotate(state.angle * 4);
+  context.strokeStyle = "#1c1410";
+  context.lineWidth = radius * 0.18;
+  context.lineCap = "round";
+
+  for (let spoke = 0; spoke < 4; spoke += 1) {
+    const spokeAngle = (spoke / 4) * TAU;
+    context.beginPath();
+    context.moveTo(0, 0);
+    context.lineTo(Math.cos(spokeAngle) * radius * 0.72, Math.sin(spokeAngle) * radius * 0.72);
+    context.stroke();
+  }
+  context.restore();
+
+  context.fillStyle = "#d4b070";
+  context.beginPath();
+  context.arc(x, y, radius * 0.24, 0, TAU);
+  context.fill();
+}
+
+function drawSpeedLines(context, width, height) {
+  const intensity = clamp((state.speed / MAX_SPEED - 0.45) / 0.55, 0, 1);
+
+  if (intensity < 0.05) {
+    return;
+  }
+
+  const horizonX = width * 0.5;
+  const horizonY = height * 0.42;
+  const lineCount = 14;
+  const phase = state.angle * 4;
+
+  context.save();
+  context.strokeStyle = `rgba(255, 255, 255, ${0.32 * intensity})`;
+  context.lineWidth = Math.max(1, width * 0.0035);
+  context.lineCap = "round";
+
+  for (let index = 0; index < lineCount; index += 1) {
+    const angle = (index / lineCount) * TAU + phase;
+    const innerRadius = Math.min(width, height) * 0.07;
+    const outerRadius = Math.min(width, height) * (0.16 + 0.14 * intensity);
+    const x1 = horizonX + Math.cos(angle) * innerRadius;
+    const y1 = horizonY + Math.sin(angle) * innerRadius * 0.55;
+    const x2 = horizonX + Math.cos(angle) * outerRadius;
+    const y2 = horizonY + Math.sin(angle) * outerRadius * 0.55;
+
+    context.beginPath();
+    context.moveTo(x1, y1);
+    context.lineTo(x2, y2);
+    context.stroke();
+  }
+  context.restore();
+}
+
 function resizeCanvas(canvas) {
   const context = canvas.getContext("2d");
   const rect = canvas.getBoundingClientRect();
@@ -229,11 +404,53 @@ function drawDriverBackground(context, width, height) {
   context.fillStyle = sky;
   context.fillRect(0, 0, width, height);
 
+  drawClouds(context, width, height);
+
+  const farHillShift = Math.sin(state.angle * 0.4) * width * 0.05;
+  context.fillStyle = "#a8d8a3";
+  context.beginPath();
+  context.moveTo(0, height * 0.46);
+  context.bezierCurveTo(
+    width * 0.18 + farHillShift,
+    height * 0.40,
+    width * 0.30 + farHillShift,
+    height * 0.48,
+    width * 0.50 + farHillShift,
+    height * 0.43,
+  );
+  context.bezierCurveTo(
+    width * 0.72 + farHillShift,
+    height * 0.38,
+    width * 0.88 + farHillShift,
+    height * 0.46,
+    width,
+    height * 0.42,
+  );
+  context.lineTo(width, height);
+  context.lineTo(0, height);
+  context.closePath();
+  context.fill();
+
+  const nearHillShift = Math.sin(state.angle * 0.7) * width * 0.09;
   context.fillStyle = "#6ecf65";
   context.beginPath();
-  context.moveTo(0, height * 0.44);
-  context.bezierCurveTo(width * 0.24, height * 0.35, width * 0.35, height * 0.51, width * 0.56, height * 0.42);
-  context.bezierCurveTo(width * 0.78, height * 0.33, width * 0.87, height * 0.48, width, height * 0.39);
+  context.moveTo(0, height * 0.46);
+  context.bezierCurveTo(
+    width * 0.24 + nearHillShift,
+    height * 0.37,
+    width * 0.35 + nearHillShift,
+    height * 0.53,
+    width * 0.56 + nearHillShift,
+    height * 0.44,
+  );
+  context.bezierCurveTo(
+    width * 0.78 + nearHillShift,
+    height * 0.35,
+    width * 0.87 + nearHillShift,
+    height * 0.50,
+    width,
+    height * 0.41,
+  );
   context.lineTo(width, height);
   context.lineTo(0, height);
   context.closePath();
@@ -320,6 +537,8 @@ function drawDriverTrack(context, width, height) {
 
   const sleeperPhase = ((normalizeParam(state.angle) * 7) / TAU) % 1;
 
+  drawBallast(context, width, height);
+
   if (bridgeDeck.length > 1) {
     strokePath(context, bridgeDeck, width * 0.18, "rgba(90, 55, 28, 0.22)");
     strokePath(context, bridgeDeck, width * 0.145, "#b9783f");
@@ -374,15 +593,64 @@ function drawCab(context, width, height) {
   context.ellipse(width * 0.5, height * 0.8, width * 0.28, height * 0.12, 0, 0, TAU);
   context.fill();
 
+  const boilerWidth = width * 0.34;
+  const boilerHeight = height * 0.07;
+  const boilerX = width * 0.5 - boilerWidth / 2;
+  const boilerY = cabY - boilerHeight * 0.55;
+  fillRoundedRect(context, boilerX, boilerY, boilerWidth, boilerHeight, boilerHeight * 0.42, "#b32f27");
+  context.fillStyle = "rgba(255, 255, 255, 0.20)";
+  fillRoundedRect(
+    context,
+    boilerX + boilerWidth * 0.08,
+    boilerY + boilerHeight * 0.12,
+    boilerWidth * 0.84,
+    boilerHeight * 0.22,
+    boilerHeight * 0.12,
+    "rgba(255, 255, 255, 0.22)",
+  );
+  context.fillStyle = `rgba(255, 220, 110, ${0.55 + glow * 0.4})`;
+  context.beginPath();
+  context.arc(width * 0.5, cabY + height * 0.005, width * 0.022, 0, TAU);
+  context.fill();
+
+  const chimneyWidth = width * 0.055;
+  const chimneyHeight = height * 0.06;
+  const chimneyX = width * 0.5;
+  const chimneyTop = boilerY - chimneyHeight;
+  fillRoundedRect(
+    context,
+    chimneyX - chimneyWidth / 2,
+    chimneyTop,
+    chimneyWidth,
+    chimneyHeight,
+    chimneyWidth * 0.18,
+    "#382016",
+  );
+  fillRoundedRect(
+    context,
+    chimneyX - chimneyWidth * 0.62,
+    chimneyTop,
+    chimneyWidth * 1.24,
+    chimneyHeight * 0.18,
+    chimneyWidth * 0.1,
+    "#5d3826",
+  );
+  context.fillStyle = "rgba(255, 255, 255, 0.16)";
+  context.fillRect(chimneyX - chimneyWidth * 0.32, chimneyTop + chimneyHeight * 0.3, chimneyWidth * 0.18, chimneyHeight * 0.55);
+
+  state.chimneyX = chimneyX;
+  state.chimneyY = chimneyTop + chimneyHeight * 0.12;
+  state.chimneyWidth = chimneyWidth;
+
   fillRoundedRect(context, width * 0.18, cabY, width * 0.64, cabHeight, width * 0.035, "#d13d34");
   fillRoundedRect(context, width * 0.22, cabY + height * 0.035, width * 0.56, cabHeight * 0.44, width * 0.025, "#f2cf64");
   fillRoundedRect(context, width * 0.34, cabY + height * 0.1, width * 0.32, cabHeight * 0.36, width * 0.02, "#226d3e");
 
-  context.fillStyle = "#2f1f18";
-  context.beginPath();
-  context.arc(width * 0.31, cabY + cabHeight * 0.78, width * 0.035, 0, TAU);
-  context.arc(width * 0.69, cabY + cabHeight * 0.78, width * 0.035, 0, TAU);
-  context.fill();
+  context.fillStyle = "rgba(255, 255, 255, 0.18)";
+  context.fillRect(width * 0.36, cabY + height * 0.115, width * 0.12, height * 0.012);
+
+  drawWheel(context, width * 0.31, cabY + cabHeight * 0.78, width * 0.05);
+  drawWheel(context, width * 0.69, cabY + cabHeight * 0.78, width * 0.05);
 
   context.strokeStyle = "#6d291f";
   context.lineWidth = width * 0.01;
@@ -404,9 +672,11 @@ function drawDriverView() {
   const height = rect.height;
 
   drawDriverBackground(context, width, height);
+  drawSpeedLines(context, width, height);
   drawToyScenery(context, width, height);
   drawDriverTrack(context, width, height);
   drawCab(context, width, height);
+  drawSmoke(context);
 }
 
 function getMapTrackPoint(width, height, param, offset = 0) {
@@ -566,6 +836,14 @@ function stepTrain(deltaSeconds) {
     }
   }
 
+  state.chimneyTimer -= deltaSeconds;
+  const emitInterval = state.speed > 0.05 ? Math.max(0.06, 0.32 - state.speed * 0.07) : 0.7;
+  if (state.chimneyTimer <= 0 && state.chimneyX !== null) {
+    spawnSmokePuff();
+    state.chimneyTimer = emitInterval;
+  }
+
+  updateSmoke(deltaSeconds);
   updateSpeedReadout();
 }
 
