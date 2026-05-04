@@ -6,13 +6,13 @@
     <title>Green Digger Carrots</title>
     <meta
       name="description"
-      content="A gentle typing game where a green digger digs carrots and feeds a happy horse."
+      content="A gentle typing game where a green digger digs carrots and feeds one, two, then three happy horses."
     />
     <meta name="theme-color" content="#5ac85f" />
     <meta property="og:title" content="Green Digger Carrots" />
     <meta
       property="og:description"
-      content="A toddler-friendly browser game with forgiving keyboard controls, a green digger, carrots, and a happy horse."
+      content="A toddler-friendly browser game with forgiving keyboard controls, a green digger, carrots, and happy horses."
     />
     <meta property="og:type" content="website" />
     <link rel="stylesheet" href="styles.css" />
@@ -28,10 +28,15 @@
       <section class="playfield" aria-live="polite">
         <div class="scoreboard">
           <div class="brand">Green Digger</div>
-          <div class="carrot-meter" aria-label="Carrots fed to the horse">
+          <a class="game-link" href="train.html" aria-label="Open the toy train game">Train</a>
+          <div class="level-badge" aria-label="Current level">
+            <span data-testid="level-label">Level 1</span>
+            <span data-testid="horse-count">1 horse</span>
+          </div>
+          <div class="carrot-meter" aria-label="Carrots fed to the horses">
             <span class="meter-label">Carrots</span>
             <div class="meter-dots" data-testid="carrot-dots"></div>
-            <span class="meter-count" data-testid="carrot-count">0/5</span>
+            <span class="meter-count" data-testid="carrot-count">0/2</span>
           </div>
         </div>
 
@@ -63,6 +68,9 @@
             <div class="soil-mound" data-patch="4">
               <div class="sprout"></div>
             </div>
+            <div class="soil-mound" data-patch="5">
+              <div class="sprout"></div>
+            </div>
           </div>
 
           <div class="track"></div>
@@ -92,7 +100,53 @@
             </div>
           </div>
 
-          <div class="horse-zone">
+          <div class="horse-zone" data-horse-index="0" data-testid="horse-zone">
+            <div class="trough">
+              <div class="trough-carrots" data-testid="trough-carrots"></div>
+            </div>
+            <div class="horse" data-testid="horse" aria-label="Happy horse">
+              <div class="tail"></div>
+              <div class="body"></div>
+              <div class="neck"></div>
+              <div class="head">
+                <div class="ear ear-one"></div>
+                <div class="ear ear-two"></div>
+                <div class="eye"></div>
+                <div class="nostril"></div>
+                <div class="smile"></div>
+              </div>
+              <div class="mane"></div>
+              <div class="leg leg-one"></div>
+              <div class="leg leg-two"></div>
+              <div class="leg leg-three"></div>
+              <div class="leg leg-four"></div>
+            </div>
+          </div>
+
+          <div class="horse-zone" data-horse-index="1" data-testid="horse-zone">
+            <div class="trough">
+              <div class="trough-carrots" data-testid="trough-carrots"></div>
+            </div>
+            <div class="horse" data-testid="horse" aria-label="Happy horse">
+              <div class="tail"></div>
+              <div class="body"></div>
+              <div class="neck"></div>
+              <div class="head">
+                <div class="ear ear-one"></div>
+                <div class="ear ear-two"></div>
+                <div class="eye"></div>
+                <div class="nostril"></div>
+                <div class="smile"></div>
+              </div>
+              <div class="mane"></div>
+              <div class="leg leg-one"></div>
+              <div class="leg leg-two"></div>
+              <div class="leg leg-three"></div>
+              <div class="leg leg-four"></div>
+            </div>
+          </div>
+
+          <div class="horse-zone" data-horse-index="2" data-testid="horse-zone">
             <div class="trough">
               <div class="trough-carrots" data-testid="trough-carrots"></div>
             </div>

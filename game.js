@@ -1,8 +1,14 @@
-const CARROTS_TO_FILL_HORSE = 5;
+const CARROTS_PER_HORSE = 2;
+const LEVELS = [
+  { horseCount: 1, name: "Level 1" },
+  { horseCount: 2, name: "Level 2" },
+  { horseCount: 3, name: "Level 3" },
+];
 
 const state = {
   carrotsFed: 0,
   holdingCarrot: false,
+  levelIndex: 0,
   nextPatch: 0,
   busy: false,
   pendingActions: 0,
@@ -24,9 +30,12 @@ const elements = {
   carriedCarrot: document.querySelector("[data-testid='carried-carrot']"),
   digger: document.querySelector("[data-testid='digger']"),
   effectsCanvas: document.querySelector("[data-testid='effects-canvas']"),
-  horse: document.querySelector("[data-testid='horse']"),
+  horseCount: document.querySelector("[data-testid='horse-count']"),
+  horses: Array.from(document.querySelectorAll("[data-testid='horse']")),
+  horseZones: Array.from(document.querySelectorAll("[data-testid='horse-zone']")),
+  levelLabel: document.querySelector("[data-testid='level-label']"),
   message: document.querySelector("[data-testid='message']"),
-  troughCarrots: document.querySelector("[data-testid='trough-carrots']"),
+  troughCarrots: Array.from(document.querySelectorAll("[data-testid='trough-carrots']")),
   world: document.querySelector("[data-testid='world']"),
   patches: Array.from(document.querySelectorAll(".soil-mound")),
 };
@@ -42,7 +51,7 @@ const soundFiles = {
 };
 
 const diggerStops = {
-  patch: ["13vw", "22vw", "31vw", "40vw", "49vw"],
+  patch: ["11vw", "19vw", "27vw", "35vw", "43vw", "51vw"],
   horse: "68vw",
   home: "15vw",
 };
@@ -97,10 +106,52 @@ function makeAudio(src) {
   return audio;
 }
 
+function getCurrentLevel() {
+  return LEVELS[state.levelIndex];
+}
+
+function getLevelCarrotTarget() {
+  return getCurrentLevel().horseCount * CARROTS_PER_HORSE;
+}
+
+function getActiveHorseIndexes() {
+  const horseCount = getCurrentLevel().horseCount;
+  const firstHorseIndex = elements.horses.length - horseCount;
+
+  return elements.horses.map((_, index) => index).slice(firstHorseIndex);
+}
+
+function getTargetHorseIndex() {
+  const activeHorseIndexes = getActiveHorseIndexes();
+  const horseOrder = Math.min(
+    Math.floor(state.carrotsFed / CARROTS_PER_HORSE),
+    activeHorseIndexes.length - 1,
+  );
+
+  return activeHorseIndexes[horseOrder];
+}
+
+function getFedCountForHorse(horseIndex) {
+  const activeHorseIndexes = getActiveHorseIndexes();
+  const horseOrder = activeHorseIndexes.indexOf(horseIndex);
+
+  if (horseOrder === -1) {
+    return 0;
+  }
+
+  const fedBeforeHorse = horseOrder * CARROTS_PER_HORSE;
+  return Math.max(0, Math.min(CARROTS_PER_HORSE, state.carrotsFed - fedBeforeHorse));
+}
+
+function formatHorseCount(count) {
+  return `${count} horse${count === 1 ? "" : "s"}`;
+}
+
 function renderDots() {
+  const carrotTarget = getLevelCarrotTarget();
   elements.carrotDots.innerHTML = "";
 
-  for (let index = 0; index < CARROTS_TO_FILL_HORSE; index += 1) {
+  for (let index = 0; index < carrotTarget; index += 1) {
     const dot = document.createElement("span");
     dot.className = index < state.carrotsFed ? "dot filled" : "dot";
     elements.carrotDots.append(dot);
@@ -613,31 +664,47 @@ function playSynthHorseWhinny() {
   playNoiseBurst({ duration: 0.2, frequency: 2100, filterType: "bandpass", gain: 0.018, delay: 0.22 });
 }
 
-function addTroughCarrot() {
+function addTroughCarrot(horseIndex) {
   const carrot = document.createElement("span");
   carrot.className = "mini-carrot";
-  carrot.style.setProperty("--tilt", `${-22 + state.carrotsFed * 11}deg`);
-  elements.troughCarrots.append(carrot);
+  carrot.style.setProperty("--tilt", `${-22 + getFedCountForHorse(horseIndex) * 18}deg`);
+  elements.troughCarrots[horseIndex]?.append(carrot);
 }
 
-function resetRound() {
+function startLevel(levelIndex = state.levelIndex) {
+  state.levelIndex = levelIndex;
   state.carrotsFed = 0;
   state.holdingCarrot = false;
   state.nextPatch = 0;
-  elements.troughCarrots.innerHTML = "";
+  elements.troughCarrots.forEach((trough) => {
+    trough.innerHTML = "";
+  });
   elements.carriedCarrot.classList.remove("visible");
-  elements.horse.classList.remove("full", "happy");
+  elements.horses.forEach((horse) => horse.classList.remove("full", "happy"));
   elements.world.classList.remove("celebration");
   elements.patches.forEach((patch) => patch.classList.remove("dug"));
   setDiggerPosition(diggerStops.home);
-  setMessage("Ready to dig");
+  setMessage(`${getCurrentLevel().name}: ${formatHorseCount(getCurrentLevel().horseCount)}`);
   render();
 }
 
 function render() {
-  elements.carrotCount.textContent = `${state.carrotsFed}/${CARROTS_TO_FILL_HORSE}`;
+  const currentLevel = getCurrentLevel();
+  const activeHorseIndexes = getActiveHorseIndexes();
+  const targetHorseIndex = getTargetHorseIndex();
+
+  elements.levelLabel.textContent = currentLevel.name;
+  elements.horseCount.textContent = formatHorseCount(currentLevel.horseCount);
+  elements.carrotCount.textContent = `${state.carrotsFed}/${getLevelCarrotTarget()}`;
   elements.carriedCarrot.classList.toggle("visible", state.holdingCarrot);
-  elements.horse.classList.toggle("full", state.carrotsFed >= CARROTS_TO_FILL_HORSE);
+  elements.horseZones.forEach((zone, index) => {
+    zone.classList.toggle("visible", activeHorseIndexes.includes(index));
+    zone.classList.toggle("target", index === targetHorseIndex);
+  });
+  elements.horses.forEach((horse, index) => {
+    const isFull = getFedCountForHorse(index) >= CARROTS_PER_HORSE;
+    horse.classList.toggle("full", isFull);
+  });
   renderDots();
 }
 
@@ -680,14 +747,18 @@ async function digCarrot() {
 }
 
 async function feedHorse() {
+  const targetHorseIndex = getTargetHorseIndex();
+  const targetHorse = elements.horses[targetHorseIndex];
+  const targetTrough = elements.troughCarrots[targetHorseIndex];
+
   setMessage("To the horse");
   await moveDiggerTo(diggerStops.horse, 540);
 
   elements.digger.classList.add("feeding");
   state.holdingCarrot = false;
+  addTroughCarrot(targetHorseIndex);
   state.carrotsFed += 1;
-  addTroughCarrot();
-  spawnSparkleBurst(elements.troughCarrots, {
+  spawnSparkleBurst(targetTrough || elements.world, {
     count: 10,
     colors: ["#fff6a7", "#ffab37", "#ffffff"],
     yRatio: 0.1,
@@ -698,18 +769,27 @@ async function feedHorse() {
   await sleep(420);
   elements.digger.classList.remove("feeding");
 
-  if (state.carrotsFed >= CARROTS_TO_FILL_HORSE) {
-    setMessage("Happy full horse");
-    elements.horse.classList.add("happy", "full");
+  const horseIsFull = getFedCountForHorse(targetHorseIndex) >= CARROTS_PER_HORSE;
+  const levelIsComplete = state.carrotsFed >= getLevelCarrotTarget();
+
+  if (horseIsFull) {
+    setMessage(levelIsComplete ? "Happy horses" : "Happy horse");
+    targetHorse.classList.add("happy", "full");
     elements.world.classList.add("celebration");
-    spawnSparkleBurst(elements.horse, {
-      count: 34,
+    spawnSparkleBurst(targetHorse, {
+      count: levelIsComplete ? 34 : 20,
       colors: ["#fff6a7", "#ffd45a", "#ffffff", "#ff8a22"],
       yRatio: 0.22,
     });
     playHappyHorseSound();
-    await sleep(2500);
-    resetRound();
+    await sleep(levelIsComplete ? 2200 : 1200);
+    targetHorse.classList.remove("happy");
+    elements.world.classList.remove("celebration");
+  }
+
+  if (levelIsComplete) {
+    const nextLevelIndex = (state.levelIndex + 1) % LEVELS.length;
+    startLevel(nextLevelIndex);
   } else {
     await moveDiggerTo(diggerStops.home, 340);
     setMessage("Ready to dig");
@@ -740,7 +820,13 @@ async function processActions() {
 
 function requestAction() {
   startBackgroundMusic();
-  state.pendingActions = Math.min(state.pendingActions + 1, 20);
+  state.pendingActions = 0;
+
+  if (state.busy) {
+    return;
+  }
+
+  state.pendingActions = 1;
   processActions();
 }
 
@@ -757,4 +843,4 @@ window.addEventListener("keydown", handleKeydown);
 elements.actionButton.addEventListener("click", requestAction);
 
 setupEffectsCanvas();
-render();
+startLevel(0);
