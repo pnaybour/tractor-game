@@ -28,7 +28,7 @@ The digger does not keep a long action buffer. Extra keys pressed while the digg
 
 ## Toy Train Driver
 
-Toy Train Driver is a first-person wooden toy train game on a circular Brio-style track. The main view looks forward from the train cab, and a small top-down map shows where the train is on the loop.
+Toy Train Driver is a first-person wooden toy train game on a classic Brio-style figure-eight track with a little bridge over the crossing. The main view looks forward from the train cab, and a small top-down map shows where the train is on the track.
 
 Click, tap, or press any normal key to make the train go faster. Repeated clicks make it speed up; if the child pauses, it gently slows down. There is no crash, score, or failure state.
 
@@ -37,7 +37,7 @@ Click, tap, or press any normal key to make the train go faster. Repeated clicks
 - Age-appropriate for a toddler with help from an adult.
 - Works with random typing, so letters, numbers, space, and enter all count.
 - No wrong answers, no timer, no score pressure, and no failure screen.
-- Large friendly visuals with a green digger, carrot patches, happy horses, a toy train cab, and a wooden circular track.
+- Large friendly visuals with a green digger, carrot patches, happy horses, a toy train cab, and a wooden figure-eight bridge track.
 - Cheerful sound effects and soft background music that starts only after the first input.
 - Runs as a small static web page with no backend.
 
@@ -55,7 +55,7 @@ Modifier shortcuts such as `Ctrl`, `Alt`, and `Meta` combinations are ignored so
 
 - CSS-drawn farm scene with hills, fence, carrot mounds, dirt track, digger, troughs, and horses.
 - Three progressive levels with one, two, then three horses.
-- Canvas-drawn toy train driver view with a circular track map.
+- Canvas-drawn toy train driver view with a figure-eight track map and bridge crossing.
 - Real local sound effects for shovel digging, carrot crunching, and horse neighing.
 - Synthesized engine/tread movement sounds for the digger and gentle train chuffs.
 - Synthesized soft background music using the Web Audio API.

@@ -2,6 +2,9 @@ const TAU = Math.PI * 2;
 const MAX_SPEED = 3.2;
 const BOOST_AMOUNT = 0.46;
 const SPEED_DECAY = 0.22;
+const FIGURE_EIGHT_Y_SCALE = 0.58;
+const BRIDGE_PARAM = 0;
+const BRIDGE_SPAN = 0.38;
 
 const state = {
   angle: -Math.PI / 2,
@@ -29,6 +32,38 @@ function clamp(value, min, max) {
 
 function lerp(from, to, amount) {
   return from + (to - from) * amount;
+}
+
+function normalizeParam(param) {
+  return ((param % TAU) + TAU) % TAU;
+}
+
+function shortestParamDistance(from, to) {
+  const distance = Math.abs(normalizeParam(from - to));
+  return Math.min(distance, TAU - distance);
+}
+
+function getBridgeAmount(param) {
+  return clamp(1 - shortestParamDistance(param, BRIDGE_PARAM) / BRIDGE_SPAN, 0, 1);
+}
+
+function getFigureEightPose(param, xScale = 1, yScale = 1) {
+  const trackParam = normalizeParam(param);
+  const x = Math.sin(trackParam);
+  const y = FIGURE_EIGHT_Y_SCALE * Math.sin(trackParam) * Math.cos(trackParam);
+  const dx = Math.cos(trackParam);
+  const dy = FIGURE_EIGHT_Y_SCALE * Math.cos(trackParam * 2);
+  const tangentAngle = Math.atan2(dy * yScale, dx * xScale);
+
+  return {
+    bridgeAmount: getBridgeAmount(trackParam),
+    tangentAngle,
+    trackParam,
+    x,
+    y,
+    dx,
+    dy,
+  };
 }
 
 function getAudioContext() {
@@ -162,17 +197,26 @@ function resizeCanvases() {
 function getDriverTrackPoint(width, height, progress) {
   const horizon = height * 0.42;
   const depth = progress ** 1.55;
-  const bend = Math.sin(state.angle + progress * 1.65) * width * 0.16 * (0.35 + progress * 0.65);
-  const wobble = Math.sin(state.angle * 2 + progress * 3.4) * width * 0.018 * progress;
+  const lookAhead = lerp(1.72, 0.06, progress);
+  const currentPose = getFigureEightPose(state.angle);
+  const samplePose = getFigureEightPose(state.angle + lookAhead);
+  const deltaX = samplePose.x - currentPose.x;
+  const deltaY = samplePose.y - currentPose.y;
+  const heading = Math.atan2(currentPose.dy, currentPose.dx);
+  const lateral = -deltaX * Math.sin(heading) + deltaY * Math.cos(heading);
+  const bend = clamp(lateral * width * 0.5, -width * 0.34, width * 0.34) * (0.28 + progress * 0.72);
+  const wobble = Math.sin(samplePose.trackParam * 3.2) * width * 0.014 * progress;
   const centerX = width * 0.5 + bend + wobble;
   const y = horizon + depth * height * 0.5;
   const railGap = lerp(width * 0.08, width * 0.43, progress);
 
   return {
+    bridgeAmount: samplePose.bridgeAmount,
     centerX,
     leftX: centerX - railGap / 2,
     rightX: centerX + railGap / 2,
     railGap,
+    sampleParam: samplePose.trackParam,
     y,
   };
 }
@@ -256,6 +300,9 @@ function drawDriverTrack(context, width, height) {
   const leftRail = [];
   const rightRail = [];
   const centerLine = [];
+  const bridgeDeck = [];
+  const bridgeLeftRail = [];
+  const bridgeRightRail = [];
 
   for (let index = 0; index <= 42; index += 1) {
     const progress = index / 42;
@@ -263,15 +310,28 @@ function drawDriverTrack(context, width, height) {
     leftRail.push([point.leftX, point.y]);
     rightRail.push([point.rightX, point.y]);
     centerLine.push([point.centerX, point.y]);
+
+    if (point.bridgeAmount > 0) {
+      bridgeDeck.push([point.centerX, point.y]);
+      bridgeLeftRail.push([point.leftX, point.y]);
+      bridgeRightRail.push([point.rightX, point.y]);
+    }
   }
 
-  const sleeperPhase = ((state.angle * 7) / TAU) % 1;
+  const sleeperPhase = ((normalizeParam(state.angle) * 7) / TAU) % 1;
+
+  if (bridgeDeck.length > 1) {
+    strokePath(context, bridgeDeck, width * 0.18, "rgba(90, 55, 28, 0.22)");
+    strokePath(context, bridgeDeck, width * 0.145, "#b9783f");
+    strokePath(context, bridgeDeck, width * 0.112, "#d9a35f");
+  }
 
   for (let index = 0; index < 24; index += 1) {
     const progress = (index + sleeperPhase + 1) / 25;
     const point = getDriverTrackPoint(width, height, progress);
     const sleeperWidth = point.railGap + lerp(width * 0.06, width * 0.18, progress);
     const sleeperHeight = lerp(height * 0.008, height * 0.035, progress);
+    const sleeperColor = point.bridgeAmount > 0.1 ? "#e0ad6b" : "#b87941";
 
     context.save();
     context.translate(point.centerX, point.y);
@@ -283,7 +343,7 @@ function drawDriverTrack(context, width, height) {
       sleeperWidth,
       sleeperHeight,
       sleeperHeight * 0.28,
-      "#b87941",
+      sleeperColor,
     );
     context.fillStyle = "rgba(93, 52, 26, 0.22)";
     context.fillRect(-sleeperWidth * 0.42, -sleeperHeight * 0.35, sleeperWidth * 0.84, sleeperHeight * 0.18);
@@ -295,6 +355,13 @@ function drawDriverTrack(context, width, height) {
   strokePath(context, rightRail, width * 0.026, "#7b5b3d");
   strokePath(context, leftRail, width * 0.012, "#d2b07b");
   strokePath(context, rightRail, width * 0.012, "#d2b07b");
+
+  if (bridgeDeck.length > 1) {
+    strokePath(context, bridgeLeftRail, width * 0.034, "#664126");
+    strokePath(context, bridgeRightRail, width * 0.034, "#664126");
+    strokePath(context, bridgeLeftRail, width * 0.014, "#f2d08a");
+    strokePath(context, bridgeRightRail, width * 0.014, "#f2d08a");
+  }
 }
 
 function drawCab(context, width, height) {
@@ -342,12 +409,78 @@ function drawDriverView() {
   drawCab(context, width, height);
 }
 
-function drawMapSleeper(context, centerX, centerY, radius, angle, length, width) {
+function getMapTrackPoint(width, height, param, offset = 0) {
+  const xScale = width * 0.34;
+  const yScale = height * 0.9;
+  const pose = getFigureEightPose(param, xScale, yScale);
+  const normalX = -Math.sin(pose.tangentAngle);
+  const normalY = Math.cos(pose.tangentAngle);
+
+  return {
+    bridgeAmount: pose.bridgeAmount,
+    normalX,
+    normalY,
+    tangentAngle: pose.tangentAngle,
+    trackParam: pose.trackParam,
+    x: width / 2 + pose.x * xScale + normalX * offset,
+    y: height / 2 + pose.y * yScale + normalY * offset,
+  };
+}
+
+function getMapPath(width, height, offset = 0, startParam = 0, endParam = TAU, samples = 220) {
+  const points = [];
+
+  for (let index = 0; index <= samples; index += 1) {
+    const param = startParam + ((endParam - startParam) * index) / samples;
+    const point = getMapTrackPoint(width, height, param, offset);
+    points.push([point.x, point.y]);
+  }
+
+  return points;
+}
+
+function drawMapSleeper(context, point, length, width) {
   context.save();
-  context.translate(centerX + Math.cos(angle) * radius, centerY + Math.sin(angle) * radius);
-  context.rotate(angle + Math.PI / 2);
+  context.translate(point.x, point.y);
+  context.rotate(point.tangentAngle + Math.PI / 2);
   fillRoundedRect(context, -length / 2, -width / 2, length, width, width * 0.25, "#b87941");
   context.restore();
+}
+
+function drawMapBridge(context, width, height) {
+  const startParam = -BRIDGE_SPAN;
+  const endParam = BRIDGE_SPAN;
+  const railOffset = width * 0.045;
+  const deck = getMapPath(width, height, 0, startParam, endParam, 34);
+  const leftRail = getMapPath(width, height, -railOffset, startParam, endParam, 34);
+  const rightRail = getMapPath(width, height, railOffset, startParam, endParam, 34);
+
+  strokePath(context, deck, width * 0.18, "rgba(69, 43, 25, 0.24)");
+  strokePath(context, deck, width * 0.145, "#b9783f");
+  strokePath(context, deck, width * 0.112, "#dcaa66");
+
+  for (let index = 0; index <= 10; index += 1) {
+    const param = startParam + ((endParam - startParam) * index) / 10;
+    const point = getMapTrackPoint(width, height, param);
+    drawMapSleeper(context, point, width * 0.125, width * 0.025);
+  }
+
+  strokePath(context, leftRail, width * 0.034, "#634026");
+  strokePath(context, rightRail, width * 0.034, "#634026");
+  strokePath(context, leftRail, width * 0.014, "#f0cf8d");
+  strokePath(context, rightRail, width * 0.014, "#f0cf8d");
+
+  [startParam, endParam].forEach((param) => {
+    const point = getMapTrackPoint(width, height, param);
+    const supportLength = width * 0.18;
+    const supportWidth = width * 0.026;
+
+    context.save();
+    context.translate(point.x, point.y);
+    context.rotate(point.tangentAngle + Math.PI / 2);
+    fillRoundedRect(context, -supportLength / 2, -supportWidth / 2, supportLength, supportWidth, supportWidth * 0.3, "#8f5b33");
+    context.restore();
+  });
 }
 
 function drawTopDownMap() {
@@ -355,9 +488,7 @@ function drawTopDownMap() {
   const rect = elements.mapCanvas.getBoundingClientRect();
   const width = rect.width;
   const height = rect.height;
-  const centerX = width / 2;
-  const centerY = height / 2;
-  const radius = Math.min(width, height) * 0.34;
+  const railOffset = width * 0.045;
 
   context.clearRect(0, 0, width, height);
   fillRoundedRect(context, 0, 0, width, height, width * 0.08, "#d49d5c");
@@ -371,41 +502,25 @@ function drawTopDownMap() {
     context.stroke();
   }
 
-  for (let index = 0; index < 36; index += 1) {
-    drawMapSleeper(context, centerX, centerY, radius, (index / 36) * TAU, width * 0.13, width * 0.035);
+  for (let index = 0; index < 58; index += 1) {
+    const point = getMapTrackPoint(width, height, (index / 58) * TAU);
+    drawMapSleeper(context, point, width * 0.13, width * 0.03);
   }
 
   context.lineCap = "round";
-  context.lineWidth = width * 0.09;
-  context.strokeStyle = "rgba(85, 53, 31, 0.18)";
-  context.beginPath();
-  context.arc(centerX, centerY, radius, 0, TAU);
-  context.stroke();
+  strokePath(context, getMapPath(width, height), width * 0.095, "rgba(85, 53, 31, 0.18)");
+  strokePath(context, getMapPath(width, height, -railOffset), width * 0.035, "#7b5b3d");
+  strokePath(context, getMapPath(width, height, railOffset), width * 0.035, "#7b5b3d");
+  strokePath(context, getMapPath(width, height, -railOffset), width * 0.014, "#e0be80");
+  strokePath(context, getMapPath(width, height, railOffset), width * 0.014, "#e0be80");
 
-  context.lineWidth = width * 0.035;
-  context.strokeStyle = "#7b5b3d";
-  context.beginPath();
-  context.arc(centerX, centerY, radius - width * 0.04, 0, TAU);
-  context.stroke();
-  context.beginPath();
-  context.arc(centerX, centerY, radius + width * 0.04, 0, TAU);
-  context.stroke();
+  drawMapBridge(context, width, height);
 
-  context.lineWidth = width * 0.014;
-  context.strokeStyle = "#e0be80";
-  context.beginPath();
-  context.arc(centerX, centerY, radius - width * 0.04, 0, TAU);
-  context.stroke();
-  context.beginPath();
-  context.arc(centerX, centerY, radius + width * 0.04, 0, TAU);
-  context.stroke();
-
-  const trainX = centerX + Math.cos(state.angle) * radius;
-  const trainY = centerY + Math.sin(state.angle) * radius;
+  const trainPoint = getMapTrackPoint(width, height, state.angle);
 
   context.save();
-  context.translate(trainX, trainY);
-  context.rotate(state.angle + Math.PI / 2);
+  context.translate(trainPoint.x, trainPoint.y);
+  context.rotate(trainPoint.tangentAngle + Math.PI / 2);
   fillRoundedRect(context, -width * 0.045, -width * 0.08, width * 0.09, width * 0.16, width * 0.018, "#d13d34");
   fillRoundedRect(context, -width * 0.035, -width * 0.005, width * 0.07, width * 0.12, width * 0.014, "#226d3e");
   context.fillStyle = "#f4d568";
@@ -439,7 +554,7 @@ function boostTrain() {
 
 function stepTrain(deltaSeconds) {
   state.speed = Math.max(0, state.speed - SPEED_DECAY * deltaSeconds);
-  state.angle = (state.angle + state.speed * deltaSeconds) % TAU;
+  state.angle = normalizeParam(state.angle + state.speed * deltaSeconds);
   state.boostGlow = Math.max(0, state.boostGlow - deltaSeconds * 2.4);
 
   if (state.speed > 0.08) {
@@ -497,7 +612,9 @@ window.trainGame = {
   getState() {
     return {
       angle: state.angle,
+      bridge: true,
       speed: state.speed,
+      trackShape: "figure-eight",
     };
   },
 };

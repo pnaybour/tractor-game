@@ -120,6 +120,10 @@ test.describe("toy train driver game", () => {
   test("the top-down map and first-person view render pixels", async ({ page }) => {
     await page.goto(trainUrl);
 
+    const trackState = await page.evaluate(() => window.trainGame.getState());
+    expect(trackState.trackShape).toBe("figure-eight");
+    expect(trackState.bridge).toBe(true);
+
     const rendered = await page.evaluate(() => {
       const canvases = [
         document.querySelector("[data-testid='driver-canvas']"),
