@@ -236,6 +236,15 @@ body {
   isolation: isolate;
 }
 
+.effects-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
 .farm-backdrop {
   position: absolute;
   inset: 0;
@@ -293,6 +302,62 @@ body {
     repeating-linear-gradient(78deg, transparent 0 3.1rem, rgba(255, 255, 255, 0.08) 3.1rem 3.55rem);
   opacity: 0.55;
   transform: skewY(-1deg);
+}
+
+.foreground-grass {
+  position: absolute;
+  left: -2rem;
+  right: -2rem;
+  bottom: 0.35rem;
+  z-index: 4;
+  height: clamp(3.3rem, 8vh, 5.2rem);
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 8% 80%, rgba(31, 117, 43, 0.22) 0 7%, transparent 8%),
+    radial-gradient(ellipse at 24% 76%, rgba(31, 117, 43, 0.16) 0 6%, transparent 7%),
+    radial-gradient(ellipse at 73% 82%, rgba(31, 117, 43, 0.2) 0 6%, transparent 7%),
+    radial-gradient(ellipse at 92% 78%, rgba(31, 117, 43, 0.18) 0 7%, transparent 8%),
+    repeating-linear-gradient(
+      82deg,
+      transparent 0 1.05rem,
+      rgba(36, 139, 50, 0.38) 1.05rem 1.22rem,
+      transparent 1.22rem 1.72rem
+    ),
+    repeating-linear-gradient(
+      103deg,
+      transparent 0 1.35rem,
+      rgba(55, 168, 61, 0.26) 1.35rem 1.52rem,
+      transparent 1.52rem 2.2rem
+    );
+  opacity: 0.8;
+  mask: linear-gradient(transparent 0, black 28%);
+  -webkit-mask: linear-gradient(transparent 0, black 28%);
+}
+
+.foreground-grass::before,
+.foreground-grass::after {
+  content: "";
+  position: absolute;
+  bottom: 1.4rem;
+  width: 0.55rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #fff6a7;
+  box-shadow:
+    0.34rem 0.06rem 0 #fff6a7,
+    0.17rem -0.25rem 0 #fff6a7,
+    0.17rem 0.35rem 0 #fff6a7,
+    0.18rem 0.06rem 0 0.08rem #e9b83f;
+  opacity: 0.8;
+}
+
+.foreground-grass::before {
+  left: 12%;
+}
+
+.foreground-grass::after {
+  right: 17%;
+  transform: scale(0.82);
 }
 
 .field-left {
@@ -417,6 +482,10 @@ body {
   transform: translateX(var(--x));
   transition: transform 480ms cubic-bezier(0.2, 0.75, 0.24, 1);
   filter: drop-shadow(0 0.65rem 0 rgba(37, 70, 35, 0.2));
+}
+
+.digger.moving {
+  animation: digger-drive-wobble 210ms ease-in-out infinite;
 }
 
 .digger::after {
@@ -673,6 +742,10 @@ body {
     inset 0 -0.3rem 0 rgba(0, 0, 0, 0.24);
 }
 
+.digger.moving .tread {
+  animation: tread-roll 260ms linear infinite;
+}
+
 .tread span {
   width: 22%;
   aspect-ratio: 1;
@@ -683,6 +756,10 @@ body {
   box-shadow:
     inset 0 0 0 0.14rem #5c665c,
     0 0.04rem 0 rgba(0, 0, 0, 0.22);
+}
+
+.digger.moving .tread span {
+  animation: wheel-turn 360ms linear infinite;
 }
 
 .carried-carrot {
@@ -701,6 +778,7 @@ body {
 .carried-carrot.visible {
   opacity: 1;
   transform: rotate(-18deg) scale(1);
+  animation: carrot-found-bounce 420ms cubic-bezier(0.25, 1.5, 0.4, 1);
 }
 
 .carrot-top {
@@ -772,10 +850,19 @@ body {
   width: 87%;
   height: 78%;
   transform-origin: bottom center;
+  animation: horse-breathe 3.6s ease-in-out infinite;
 }
 
 .horse.happy {
   animation: horse-happy 700ms ease-in-out 4;
+}
+
+.horse.happy .tail {
+  animation: tail-sway 280ms ease-in-out infinite;
+}
+
+.horse.happy .ear {
+  animation: ear-wiggle 260ms ease-in-out infinite;
 }
 
 .horse.full .smile {
@@ -912,6 +999,10 @@ body {
   aspect-ratio: 1;
   border-radius: 50%;
   background: white;
+}
+
+.horse:not(.happy) .eye {
+  animation: horse-blink 5.5s ease-in-out infinite;
 }
 
 .nostril {
@@ -1127,6 +1218,55 @@ body {
   }
 }
 
+@keyframes digger-drive-wobble {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+
+  50% {
+    translate: 0 0.08rem;
+  }
+}
+
+@keyframes tread-roll {
+  from {
+    background-position:
+      0 0,
+      0 0;
+  }
+
+  to {
+    background-position:
+      1.6rem 0,
+      0 0;
+  }
+}
+
+@keyframes wheel-turn {
+  from {
+    rotate: 0deg;
+  }
+
+  to {
+    rotate: 360deg;
+  }
+}
+
+@keyframes carrot-found-bounce {
+  0% {
+    transform: rotate(-28deg) scale(0.55) translateY(0.8rem);
+  }
+
+  62% {
+    transform: rotate(-16deg) scale(1.12) translateY(-0.25rem);
+  }
+
+  100% {
+    transform: rotate(-18deg) scale(1) translateY(0);
+  }
+}
+
 @keyframes horse-happy {
   0%,
   100% {
@@ -1139,6 +1279,41 @@ body {
 
   75% {
     transform: rotate(3deg) translateY(-0.4rem);
+  }
+}
+
+@keyframes horse-breathe {
+  0%,
+  100% {
+    transform: translateY(0) scaleY(1);
+  }
+
+  50% {
+    transform: translateY(0.08rem) scaleY(0.992);
+  }
+}
+
+@keyframes horse-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+
+  95%,
+  97% {
+    transform: scaleY(0.12);
+  }
+}
+
+@keyframes ear-wiggle {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+
+  50% {
+    translate: 0 -0.12rem;
   }
 }
 
@@ -1321,7 +1496,14 @@ body {
   .cloud-two,
   .exhaust::after,
   .tail,
-  .headlight {
+  .headlight,
+  .digger.moving,
+  .digger.moving .tread,
+  .digger.moving .tread span,
+  .carried-carrot.visible,
+  .horse,
+  .horse .eye,
+  .horse.happy .ear {
     animation: none !important;
   }
 }

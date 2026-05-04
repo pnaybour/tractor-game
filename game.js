@@ -8,8 +8,13 @@ const state = {
   pendingActions: 0,
   activeSounds: new Set(),
   audioContext: null,
+  effectsContext: null,
+  effectsDpr: 1,
+  effectsFrame: null,
+  lastEffectsTime: 0,
   musicStarted: false,
   musicTimer: null,
+  particles: [],
 };
 
 const elements = {
@@ -18,6 +23,7 @@ const elements = {
   carrotDots: document.querySelector("[data-testid='carrot-dots']"),
   carriedCarrot: document.querySelector("[data-testid='carried-carrot']"),
   digger: document.querySelector("[data-testid='digger']"),
+  effectsCanvas: document.querySelector("[data-testid='effects-canvas']"),
   horse: document.querySelector("[data-testid='horse']"),
   message: document.querySelector("[data-testid='message']"),
   troughCarrots: document.querySelector("[data-testid='trough-carrots']"),
@@ -112,6 +118,187 @@ function setDiggerPosition(position) {
 function sleep(ms) {
   return new Promise((resolve) => {
     window.setTimeout(resolve, ms);
+  });
+}
+
+function prefersReducedMotion() {
+  return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+}
+
+function setupEffectsCanvas() {
+  if (!elements.effectsCanvas) {
+    return;
+  }
+
+  state.effectsContext = elements.effectsCanvas.getContext("2d");
+
+  if (!state.effectsContext) {
+    return;
+  }
+
+  const resizeCanvas = () => {
+    const rect = elements.world.getBoundingClientRect();
+    state.effectsDpr = Math.min(window.devicePixelRatio || 1, 2);
+    elements.effectsCanvas.width = Math.max(1, Math.round(rect.width * state.effectsDpr));
+    elements.effectsCanvas.height = Math.max(1, Math.round(rect.height * state.effectsDpr));
+    elements.effectsCanvas.style.width = `${rect.width}px`;
+    elements.effectsCanvas.style.height = `${rect.height}px`;
+    state.effectsContext.setTransform(state.effectsDpr, 0, 0, state.effectsDpr, 0, 0);
+  };
+
+  resizeCanvas();
+  window.addEventListener("resize", resizeCanvas);
+
+  if ("ResizeObserver" in window) {
+    new ResizeObserver(resizeCanvas).observe(elements.world);
+  }
+
+  state.effectsFrame = window.requestAnimationFrame(drawEffects);
+}
+
+function getWorldPoint(element, xRatio = 0.5, yRatio = 0.5) {
+  const worldRect = elements.world.getBoundingClientRect();
+  const rect = element.getBoundingClientRect();
+
+  return {
+    x: rect.left - worldRect.left + rect.width * xRatio,
+    y: rect.top - worldRect.top + rect.height * yRatio,
+  };
+}
+
+function addParticle(particle) {
+  if (!state.effectsContext || prefersReducedMotion()) {
+    return;
+  }
+
+  state.particles.push({
+    alpha: 1,
+    gravity: 0,
+    life: 40,
+    maxLife: 40,
+    rotation: 0,
+    rotationSpeed: 0,
+    shape: "circle",
+    size: 4,
+    vx: 0,
+    vy: 0,
+    ...particle,
+  });
+}
+
+function drawEffects(timestamp) {
+  const context = state.effectsContext;
+
+  if (!context) {
+    return;
+  }
+
+  const rect = elements.effectsCanvas.getBoundingClientRect();
+  const delta = state.lastEffectsTime ? Math.min(2.5, (timestamp - state.lastEffectsTime) / 16.67) : 1;
+  state.lastEffectsTime = timestamp;
+
+  context.clearRect(0, 0, rect.width, rect.height);
+
+  state.particles = state.particles.filter((particle) => {
+    particle.x += particle.vx * delta;
+    particle.y += particle.vy * delta;
+    particle.vy += particle.gravity * delta;
+    particle.rotation += particle.rotationSpeed * delta;
+    particle.life -= delta;
+
+    if (particle.life <= 0) {
+      return false;
+    }
+
+    const fade = Math.max(0, particle.life / particle.maxLife);
+    context.save();
+    context.globalAlpha = particle.alpha * fade;
+    context.translate(particle.x, particle.y);
+    context.rotate(particle.rotation);
+    context.fillStyle = particle.color;
+
+    if (particle.shape === "spark") {
+      context.strokeStyle = particle.color;
+      context.lineWidth = Math.max(1, particle.size * 0.22);
+      context.beginPath();
+      context.moveTo(-particle.size, 0);
+      context.lineTo(particle.size, 0);
+      context.moveTo(0, -particle.size);
+      context.lineTo(0, particle.size);
+      context.stroke();
+    } else if (particle.shape === "smoke") {
+      const radius = particle.size * (1.2 - fade * 0.25);
+      context.beginPath();
+      context.arc(0, 0, radius, 0, Math.PI * 2);
+      context.fill();
+    } else {
+      context.beginPath();
+      context.arc(0, 0, particle.size, 0, Math.PI * 2);
+      context.fill();
+    }
+
+    context.restore();
+    return true;
+  });
+
+  state.effectsFrame = window.requestAnimationFrame(drawEffects);
+}
+
+function spawnDirtBurst(source) {
+  const origin = getWorldPoint(source, 0.52, 0.42);
+  const colors = ["#6b4327", "#8a5a33", "#a27145", "#50321e"];
+
+  for (let index = 0; index < 24; index += 1) {
+    addParticle({
+      x: origin.x + (Math.random() - 0.5) * 14,
+      y: origin.y + Math.random() * 8,
+      vx: (Math.random() - 0.5) * 4.8,
+      vy: -2.4 - Math.random() * 4.2,
+      gravity: 0.22 + Math.random() * 0.08,
+      size: 2 + Math.random() * 3.8,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      life: 32 + Math.random() * 28,
+      maxLife: 60,
+    });
+  }
+}
+
+function spawnSparkleBurst(source, options = {}) {
+  const origin = getWorldPoint(source, options.xRatio ?? 0.5, options.yRatio ?? 0.42);
+  const colors = options.colors ?? ["#fff6a7", "#ffd45a", "#ffffff", "#ffab37"];
+
+  for (let index = 0; index < (options.count ?? 16); index += 1) {
+    addParticle({
+      x: origin.x + (Math.random() - 0.5) * 12,
+      y: origin.y + (Math.random() - 0.5) * 8,
+      vx: (Math.random() - 0.5) * 3.6,
+      vy: -1.2 - Math.random() * 2.4,
+      gravity: 0.035 + Math.random() * 0.035,
+      size: 3 + Math.random() * 4,
+      shape: "spark",
+      rotation: Math.random() * Math.PI,
+      rotationSpeed: (Math.random() - 0.5) * 0.18,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      life: 28 + Math.random() * 22,
+      maxLife: 50,
+    });
+  }
+}
+
+function spawnExhaustPuff() {
+  const origin = getWorldPoint(document.querySelector(".exhaust") || elements.digger, 0.5, 0.08);
+
+  addParticle({
+    x: origin.x + (Math.random() - 0.5) * 5,
+    y: origin.y + (Math.random() - 0.5) * 4,
+    vx: -0.55 - Math.random() * 0.45,
+    vy: -0.35 - Math.random() * 0.45,
+    gravity: -0.012,
+    size: 5 + Math.random() * 7,
+    shape: "smoke",
+    color: "rgba(95, 115, 105, 0.36)",
+    life: 38 + Math.random() * 18,
+    maxLife: 56,
   });
 }
 
@@ -456,8 +643,18 @@ function render() {
 
 async function moveDiggerTo(position, durationMs) {
   playMoveSound(durationMs);
-  setDiggerPosition(position);
-  await sleep(durationMs);
+  elements.digger.classList.add("moving");
+  spawnExhaustPuff();
+
+  const exhaustTimer = window.setInterval(spawnExhaustPuff, 105);
+
+  try {
+    setDiggerPosition(position);
+    await sleep(durationMs);
+  } finally {
+    window.clearInterval(exhaustTimer);
+    elements.digger.classList.remove("moving");
+  }
 }
 
 async function digCarrot() {
@@ -468,6 +665,7 @@ async function digCarrot() {
   await moveDiggerTo(diggerStops.patch[patchIndex] || diggerStops.patch.at(-1), 520);
 
   elements.digger.classList.add("digging");
+  spawnDirtBurst(patch);
   playDigSound();
   await sleep(320);
   elements.digger.classList.remove("digging");
@@ -475,6 +673,7 @@ async function digCarrot() {
   patch.classList.add("dug");
   state.holdingCarrot = true;
   state.nextPatch += 1;
+  spawnSparkleBurst(patch);
   playPopSound();
   setMessage("Carrot found");
   render();
@@ -488,6 +687,11 @@ async function feedHorse() {
   state.holdingCarrot = false;
   state.carrotsFed += 1;
   addTroughCarrot();
+  spawnSparkleBurst(elements.troughCarrots, {
+    count: 10,
+    colors: ["#fff6a7", "#ffab37", "#ffffff"],
+    yRatio: 0.1,
+  });
   playMunchSound();
   setMessage("Crunch crunch");
   render();
@@ -498,6 +702,11 @@ async function feedHorse() {
     setMessage("Happy full horse");
     elements.horse.classList.add("happy", "full");
     elements.world.classList.add("celebration");
+    spawnSparkleBurst(elements.horse, {
+      count: 34,
+      colors: ["#fff6a7", "#ffd45a", "#ffffff", "#ff8a22"],
+      yRatio: 0.22,
+    });
     playHappyHorseSound();
     await sleep(2500);
     resetRound();
@@ -547,4 +756,5 @@ function handleKeydown(event) {
 window.addEventListener("keydown", handleKeydown);
 elements.actionButton.addEventListener("click", requestAction);
 
+setupEffectsCanvas();
 render();
