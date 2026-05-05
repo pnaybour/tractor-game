@@ -491,170 +491,150 @@ function drawSignalProp(context, x, y, size, signalParam) {
   const isRed = distance < 0.55;
 
   context.fillStyle = "#3d2a1f";
-  context.fillRect(x - size * 0.05, y - size * 0.18, size * 0.1, size * 0.95);
+  context.fillRect(x - size * 0.05, y - size * 1.2, size * 0.1, size * 1.2);
 
   fillRoundedRect(
     context,
-    x - size * 0.2,
-    y - size * 0.62,
-    size * 0.4,
-    size * 0.6,
+    x - size * 0.22,
+    y - size * 1.28,
+    size * 0.44,
+    size * 0.62,
     size * 0.08,
     "#1f1f24",
   );
 
   context.fillStyle = isRed ? "#ff3a32" : "#5a1a1a";
   context.beginPath();
-  context.arc(x, y - size * 0.46, size * 0.1, 0, TAU);
+  context.arc(x, y - size * 1.05, size * 0.1, 0, TAU);
   context.fill();
   if (isRed) {
     context.fillStyle = "rgba(255, 220, 220, 0.55)";
     context.beginPath();
-    context.arc(x - size * 0.03, y - size * 0.49, size * 0.035, 0, TAU);
+    context.arc(x - size * 0.03, y - size * 1.08, size * 0.035, 0, TAU);
     context.fill();
   }
 
   context.fillStyle = !isRed ? "#3aff60" : "#1a4a25";
   context.beginPath();
-  context.arc(x, y - size * 0.22, size * 0.1, 0, TAU);
+  context.arc(x, y - size * 0.78, size * 0.1, 0, TAU);
   context.fill();
   if (!isRed) {
     context.fillStyle = "rgba(220, 255, 230, 0.55)";
     context.beginPath();
-    context.arc(x - size * 0.03, y - size * 0.25, size * 0.035, 0, TAU);
+    context.arc(x - size * 0.03, y - size * 0.81, size * 0.035, 0, TAU);
     context.fill();
   }
 }
 
 function drawStationProp(context, x, y, size) {
-  fillRoundedRect(
-    context,
-    x - size * 1.2,
-    y + size * 0.18,
-    size * 2.4,
-    size * 0.18,
-    size * 0.04,
-    "#a3804b",
-  );
-  fillRoundedRect(
-    context,
-    x - size * 0.8,
-    y - size * 0.5,
-    size * 1.6,
-    size * 0.7,
-    size * 0.07,
-    "#f0d391",
-  );
+  fillRoundedRect(context, x - size * 1.2, y - size * 0.10, size * 2.4, size * 0.10, size * 0.03, "#a3804b");
+  fillRoundedRect(context, x - size * 0.8, y - size * 0.85, size * 1.6, size * 0.75, size * 0.07, "#f0d391");
 
   context.fillStyle = "#9c3a30";
   context.beginPath();
-  context.moveTo(x - size * 0.95, y - size * 0.5);
-  context.lineTo(x + size * 0.95, y - size * 0.5);
-  context.lineTo(x + size * 0.55, y - size * 0.95);
-  context.lineTo(x - size * 0.55, y - size * 0.95);
+  context.moveTo(x - size * 0.95, y - size * 0.85);
+  context.lineTo(x + size * 0.95, y - size * 0.85);
+  context.lineTo(x + size * 0.55, y - size * 1.30);
+  context.lineTo(x - size * 0.55, y - size * 1.30);
   context.closePath();
   context.fill();
 
-  context.fillStyle = "#5b3826";
-  fillRoundedRect(
-    context,
-    x - size * 0.13,
-    y - size * 0.18,
-    size * 0.26,
-    size * 0.38,
-    size * 0.04,
-    "#5b3826",
-  );
-
+  fillRoundedRect(context, x - size * 0.13, y - size * 0.52, size * 0.26, size * 0.42, size * 0.04, "#5b3826");
   context.fillStyle = "#7fbfd8";
-  context.fillRect(x - size * 0.6, y - size * 0.32, size * 0.22, size * 0.22);
-  context.fillRect(x + size * 0.38, y - size * 0.32, size * 0.22, size * 0.22);
-  context.strokeStyle = "rgba(0, 0, 0, 0.25)";
-  context.lineWidth = Math.max(1, size * 0.02);
-  context.beginPath();
-  context.moveTo(x - size * 0.49, y - size * 0.32);
-  context.lineTo(x - size * 0.49, y - size * 0.10);
-  context.moveTo(x + size * 0.49, y - size * 0.32);
-  context.lineTo(x + size * 0.49, y - size * 0.10);
-  context.stroke();
+  context.fillRect(x - size * 0.60, y - size * 0.70, size * 0.22, size * 0.22);
+  context.fillRect(x + size * 0.38, y - size * 0.70, size * 0.22, size * 0.22);
 }
 
 function drawSpeedSignProp(context, x, y, size, limit) {
   context.fillStyle = "#3d2a1f";
-  context.fillRect(x - size * 0.04, y - size * 0.18, size * 0.08, size * 0.7);
+  context.fillRect(x - size * 0.04, y - size * 0.90, size * 0.08, size * 0.90);
 
   context.fillStyle = "#cd3026";
   context.beginPath();
-  context.arc(x, y - size * 0.32, size * 0.3, 0, TAU);
+  context.arc(x, y - size * 1.10, size * 0.30, 0, TAU);
   context.fill();
   context.fillStyle = "#ffffff";
   context.beginPath();
-  context.arc(x, y - size * 0.32, size * 0.23, 0, TAU);
+  context.arc(x, y - size * 1.10, size * 0.23, 0, TAU);
   context.fill();
 
   context.fillStyle = "#1a1a1a";
   context.font = `bold ${Math.round(size * 0.34)}px sans-serif`;
   context.textAlign = "center";
   context.textBaseline = "middle";
-  context.fillText(String(limit), x, y - size * 0.30);
+  context.fillText(String(limit), x, y - size * 1.08);
 }
 
 function drawToyScenery(context, width, height) {
-  const toys = [
-    { angle: 0.3, color: "#e54e3f", shape: "block" },
-    { angle: 1.0, shape: "signal" },
-    { angle: 1.5, color: "#2c9f5a", shape: "tree" },
-    { angle: 2.6, color: "#f5bf3f", shape: "block" },
-    { angle: 3.2, shape: "speedsign", limit: 5 },
-    { angle: 3.8, color: "#4b91e2", shape: "arch" },
-    { angle: 4.5, shape: "station" },
-    { angle: 5.0, color: "#ff7f35", shape: "block" },
-    { angle: 5.7, shape: "signal" },
+  const props = [
+    { param: 0.3, side: 1, color: "#e54e3f", shape: "block" },
+    { param: 1.0, side: -1, shape: "signal" },
+    { param: 1.5, side: 1, color: "#2c9f5a", shape: "tree" },
+    { param: 2.6, side: 1, color: "#f5bf3f", shape: "block" },
+    { param: 3.2, side: -1, shape: "speedsign", limit: 5 },
+    { param: 3.8, side: -1, color: "#4b91e2", shape: "arch" },
+    { param: 4.5, side: 1, shape: "station" },
+    { param: 5.0, side: 1, color: "#ff7f35", shape: "block" },
+    { param: 5.7, side: -1, shape: "signal" },
   ];
 
-  toys.forEach((toy) => {
-    const offset = Math.sin(toy.angle - state.angle);
-    const depth = 0.55 + 0.45 * Math.cos(toy.angle - state.angle);
-    const x = width * (0.5 + offset * 0.42);
-    const y = height * (0.48 + (1 - depth) * 0.18);
-    const baseSize = clamp(width * (0.035 + depth * 0.04), width * 0.025, width * 0.075);
+  const LOOK_MAX = 1.72;
+  const LOOK_MIN = 0.06;
+  const LOOK_RANGE = LOOK_MAX - LOOK_MIN;
+  const SIDE_CLEAR = 1.1;
 
-    if (toy.shape === "tree") {
-      context.fillStyle = "#7a4c29";
-      fillRoundedRect(context, x - baseSize * 0.12, y, baseSize * 0.24, baseSize * 0.72, baseSize * 0.08, "#7a4c29");
-      context.fillStyle = toy.color;
+  const visible = [];
+  props.forEach((prop) => {
+    const delta = normalizeParam(prop.param - state.angle);
+    if (delta > LOOK_MIN && delta < LOOK_MAX) {
+      visible.push({ delta, prop });
+    }
+  });
+  visible.sort((a, b) => b.delta - a.delta);
+
+  visible.forEach(({ delta, prop }) => {
+    const progress = (LOOK_MAX - delta) / LOOK_RANGE;
+    const point = getDriverTrackPoint(width, height, progress);
+    const depth = progress ** 1.55;
+    const size = lerp(width * 0.018, width * 0.092, depth);
+    const x = point.centerX + prop.side * point.railGap * SIDE_CLEAR;
+    const y = point.y;
+
+    if (prop.shape === "tree") {
+      fillRoundedRect(context, x - size * 0.12, y - size * 0.72, size * 0.24, size * 0.72, size * 0.08, "#7a4c29");
+      context.fillStyle = prop.color;
       context.beginPath();
-      context.arc(x, y - baseSize * 0.1, baseSize * 0.42, 0, TAU);
+      context.arc(x, y - size * 0.80, size * 0.42, 0, TAU);
       context.fill();
       return;
     }
 
-    if (toy.shape === "arch") {
-      context.fillStyle = toy.color;
-      roundedRect(context, x - baseSize * 0.5, y - baseSize * 0.25, baseSize, baseSize * 0.72, baseSize * 0.16);
+    if (prop.shape === "arch") {
+      context.fillStyle = prop.color;
+      roundedRect(context, x - size * 0.5, y - size * 0.72, size, size * 0.72, size * 0.16);
       context.fill();
-      context.clearRect(x - baseSize * 0.23, y - baseSize * 0.05, baseSize * 0.46, baseSize * 0.52);
+      context.clearRect(x - size * 0.23, y - size * 0.52, size * 0.46, size * 0.52);
       return;
     }
 
-    if (toy.shape === "signal") {
-      drawSignalProp(context, x, y, baseSize * 1.2, toy.angle);
+    if (prop.shape === "signal") {
+      drawSignalProp(context, x, y, size * 1.2, prop.param);
       return;
     }
 
-    if (toy.shape === "station") {
-      drawStationProp(context, x, y, baseSize * 1.4);
+    if (prop.shape === "station") {
+      drawStationProp(context, x, y, size * 1.4);
       return;
     }
 
-    if (toy.shape === "speedsign") {
-      drawSpeedSignProp(context, x, y, baseSize * 1.1, toy.limit);
+    if (prop.shape === "speedsign") {
+      drawSpeedSignProp(context, x, y, size * 1.1, prop.limit);
       return;
     }
 
-    fillRoundedRect(context, x - baseSize * 0.45, y - baseSize * 0.2, baseSize * 0.9, baseSize * 0.58, baseSize * 0.12, toy.color);
+    fillRoundedRect(context, x - size * 0.45, y - size * 0.58, size * 0.9, size * 0.58, size * 0.12, prop.color);
     context.fillStyle = "rgba(255, 255, 255, 0.26)";
-    context.fillRect(x - baseSize * 0.28, y - baseSize * 0.12, baseSize * 0.24, baseSize * 0.12);
+    context.fillRect(x - size * 0.28, y - size * 0.50, size * 0.24, size * 0.12);
   });
 }
 
