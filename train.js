@@ -33,6 +33,8 @@ const state = {
   mapContext: null,
   particles: [],
   speed: 0,
+  whistleCooldown: 0,
+  whistleMessageUntil: 0,
 };
 
 const elements = {
@@ -124,8 +126,54 @@ function playTone({ frequency, duration, gain = 0.04, type = "triangle", delay =
 }
 
 function playBoostSound() {
-  playTone({ frequency: 392, duration: 0.09, gain: 0.03, type: "sine" });
-  playTone({ frequency: 523.25, duration: 0.12, gain: 0.025, type: "triangle", delay: 0.07 });
+  const audioContext = getAudioContext();
+
+  if (!audioContext) {
+    return;
+  }
+
+  const now = audioContext.currentTime;
+
+  const clickOsc = audioContext.createOscillator();
+  const clickGain = audioContext.createGain();
+  clickOsc.type = "square";
+  clickOsc.frequency.setValueAtTime(950, now);
+  clickOsc.frequency.exponentialRampToValueAtTime(620, now + 0.04);
+  clickGain.gain.setValueAtTime(0.0001, now);
+  clickGain.gain.exponentialRampToValueAtTime(0.025, now + 0.005);
+  clickGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.06);
+  clickOsc.connect(clickGain).connect(audioContext.destination);
+  clickOsc.start(now);
+  clickOsc.stop(now + 0.07);
+
+  const hissDuration = 0.22;
+  const hissBuffer = audioContext.createBuffer(
+    1,
+    Math.floor(audioContext.sampleRate * hissDuration),
+    audioContext.sampleRate,
+  );
+  const hissData = hissBuffer.getChannelData(0);
+  for (let index = 0; index < hissData.length; index += 1) {
+    const t = index / hissData.length;
+    const env = Math.pow(1 - t, 0.6);
+    hissData[index] = (Math.random() * 2 - 1) * env;
+  }
+
+  const hissSource = audioContext.createBufferSource();
+  hissSource.buffer = hissBuffer;
+
+  const highPass = audioContext.createBiquadFilter();
+  highPass.type = "highpass";
+  highPass.frequency.setValueAtTime(1900, now);
+
+  const hissGain = audioContext.createGain();
+  hissGain.gain.setValueAtTime(0.0001, now);
+  hissGain.gain.exponentialRampToValueAtTime(0.022, now + 0.012);
+  hissGain.gain.exponentialRampToValueAtTime(0.0001, now + hissDuration);
+
+  hissSource.connect(highPass).connect(hissGain).connect(audioContext.destination);
+  hissSource.start(now);
+  hissSource.stop(now + hissDuration + 0.02);
 }
 
 function playChuffSound() {
@@ -135,28 +183,135 @@ function playChuffSound() {
     return;
   }
 
-  const startTime = audioContext.currentTime;
-  const buffer = audioContext.createBuffer(1, Math.floor(audioContext.sampleRate * 0.045), audioContext.sampleRate);
-  const data = buffer.getChannelData(0);
-
-  for (let index = 0; index < data.length; index += 1) {
-    const fade = 1 - index / data.length;
-    data[index] = (Math.random() * 2 - 1) * fade;
+  const now = audioContext.currentTime;
+  const duration = 0.22;
+  const noiseBuffer = audioContext.createBuffer(
+    1,
+    Math.floor(audioContext.sampleRate * duration),
+    audioContext.sampleRate,
+  );
+  const noiseData = noiseBuffer.getChannelData(0);
+  for (let index = 0; index < noiseData.length; index += 1) {
+    const t = index / noiseData.length;
+    const env = Math.pow(1 - t, 1.4);
+    noiseData[index] = (Math.random() * 2 - 1) * env;
   }
 
-  const source = audioContext.createBufferSource();
-  const filter = audioContext.createBiquadFilter();
-  const gainNode = audioContext.createGain();
+  const noiseSource = audioContext.createBufferSource();
+  noiseSource.buffer = noiseBuffer;
 
-  filter.type = "bandpass";
-  filter.frequency.setValueAtTime(650 + state.speed * 90, startTime);
-  gainNode.gain.setValueAtTime(0.018, startTime);
-  gainNode.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.05);
+  const detune = (Math.random() - 0.5) * 60;
+  const bandpass = audioContext.createBiquadFilter();
+  bandpass.type = "bandpass";
+  bandpass.frequency.setValueAtTime(360 + state.speed * 70 + detune, now);
+  bandpass.Q.setValueAtTime(1.4, now);
 
-  source.buffer = buffer;
-  source.connect(filter).connect(gainNode).connect(audioContext.destination);
-  source.start(startTime);
-  source.stop(startTime + 0.055);
+  const lowpass = audioContext.createBiquadFilter();
+  lowpass.type = "lowpass";
+  lowpass.frequency.setValueAtTime(2200, now);
+
+  const noiseGain = audioContext.createGain();
+  noiseGain.gain.setValueAtTime(0.0001, now);
+  noiseGain.gain.exponentialRampToValueAtTime(0.05 + state.speed * 0.012, now + 0.008);
+  noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+  noiseSource.connect(bandpass).connect(lowpass).connect(noiseGain).connect(audioContext.destination);
+  noiseSource.start(now);
+  noiseSource.stop(now + duration + 0.02);
+
+  const thumpOsc = audioContext.createOscillator();
+  const thumpGain = audioContext.createGain();
+  thumpOsc.type = "sine";
+  thumpOsc.frequency.setValueAtTime(78, now);
+  thumpOsc.frequency.exponentialRampToValueAtTime(42, now + 0.10);
+  thumpGain.gain.setValueAtTime(0.0001, now);
+  thumpGain.gain.exponentialRampToValueAtTime(0.045, now + 0.006);
+  thumpGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.13);
+  thumpOsc.connect(thumpGain).connect(audioContext.destination);
+  thumpOsc.start(now);
+  thumpOsc.stop(now + 0.15);
+}
+
+function playWhistleSound() {
+  const audioContext = getAudioContext();
+
+  if (!audioContext) {
+    return;
+  }
+
+  const now = audioContext.currentTime;
+  const duration = 1.35;
+  const tones = [392, 466.16, 587.33];
+
+  const master = audioContext.createGain();
+  master.gain.setValueAtTime(0.0001, now);
+  master.gain.exponentialRampToValueAtTime(0.16, now + 0.08);
+  master.gain.setValueAtTime(0.16, now + duration - 0.45);
+  master.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+  const lowpass = audioContext.createBiquadFilter();
+  lowpass.type = "lowpass";
+  lowpass.frequency.setValueAtTime(2400, now);
+  lowpass.Q.setValueAtTime(0.6, now);
+  lowpass.connect(master);
+  master.connect(audioContext.destination);
+
+  tones.forEach((frequency, index) => {
+    const oscA = audioContext.createOscillator();
+    oscA.type = "sawtooth";
+    oscA.frequency.setValueAtTime(frequency, now);
+
+    const oscB = audioContext.createOscillator();
+    oscB.type = "sawtooth";
+    oscB.frequency.setValueAtTime(frequency * 1.006, now);
+
+    const lfo = audioContext.createOscillator();
+    const lfoGain = audioContext.createGain();
+    lfo.type = "sine";
+    lfo.frequency.setValueAtTime(5.4, now);
+    lfoGain.gain.setValueAtTime(frequency * 0.006, now);
+    lfo.connect(lfoGain);
+    lfoGain.connect(oscA.frequency);
+    lfoGain.connect(oscB.frequency);
+
+    const toneGain = audioContext.createGain();
+    toneGain.gain.value = 0.32 - index * 0.06;
+
+    oscA.connect(toneGain);
+    oscB.connect(toneGain);
+    toneGain.connect(lowpass);
+
+    oscA.start(now);
+    oscB.start(now);
+    lfo.start(now);
+    oscA.stop(now + duration + 0.1);
+    oscB.stop(now + duration + 0.1);
+    lfo.stop(now + duration + 0.1);
+  });
+
+  const breathDuration = 0.14;
+  const breathBuffer = audioContext.createBuffer(
+    1,
+    Math.floor(audioContext.sampleRate * breathDuration),
+    audioContext.sampleRate,
+  );
+  const breathData = breathBuffer.getChannelData(0);
+  for (let index = 0; index < breathData.length; index += 1) {
+    const t = index / breathData.length;
+    breathData[index] = (Math.random() * 2 - 1) * Math.pow(1 - t, 0.5);
+  }
+  const breathSource = audioContext.createBufferSource();
+  breathSource.buffer = breathBuffer;
+  const breathHp = audioContext.createBiquadFilter();
+  breathHp.type = "highpass";
+  breathHp.frequency.setValueAtTime(1500, now);
+  const breathGain = audioContext.createGain();
+  breathGain.gain.setValueAtTime(0.0001, now);
+  breathGain.gain.exponentialRampToValueAtTime(0.04, now + 0.02);
+  breathGain.gain.exponentialRampToValueAtTime(0.0001, now + breathDuration);
+  breathSource.connect(breathHp).connect(breathGain).connect(audioContext.destination);
+  breathSource.start(now);
+  breathSource.stop(now + breathDuration + 0.02);
 }
 
 function roundedRect(context, x, y, width, height, radius) {
@@ -1075,6 +1230,10 @@ function updateSpeedReadout() {
   const speedValue = Math.round((state.speed / MAX_SPEED) * 9);
   elements.speed.textContent = String(speedValue);
 
+  if (performance.now() / 1000 < state.whistleMessageUntil) {
+    return;
+  }
+
   if (state.speed < 0.08) {
     elements.message.textContent = "Ready";
   } else if (state.speed > MAX_SPEED * 0.72) {
@@ -1091,6 +1250,17 @@ function boostTrain() {
   window.setTimeout(() => elements.actionButton.classList.remove("pressed"), 90);
   updateSpeedReadout();
   playBoostSound();
+}
+
+function blowWhistle() {
+  const now = performance.now() / 1000;
+  if (now < state.whistleCooldown) {
+    return;
+  }
+  state.whistleCooldown = now + 1.0;
+  state.whistleMessageUntil = now + 1.4;
+  elements.message.textContent = "Whoo whoo!";
+  playWhistleSound();
 }
 
 function stepTrain(deltaSeconds) {
@@ -1143,6 +1313,14 @@ function handleKeydown(event) {
   }
 
   event.preventDefault();
+
+  if (event.code === "Space" || event.key === " ") {
+    if (!event.repeat) {
+      blowWhistle();
+    }
+    return;
+  }
+
   boostTrain();
 }
 
@@ -1174,4 +1352,5 @@ window.trainGame = {
       trackShape: "figure-eight",
     };
   },
+  whistle: blowWhistle,
 };
