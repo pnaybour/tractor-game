@@ -28,9 +28,9 @@ The digger does not keep a long action buffer. Extra keys pressed while the digg
 
 ## Toy Train Driver
 
-Toy Train Driver is a first-person wooden toy train game on a classic Brio-style figure-eight track with a little bridge over the crossing. The main view looks forward from the train cab, and a small top-down map shows where the train is on the track.
+Toy Train Driver is a first-person wooden toy train game on a classic Brio-style figure-eight track with a little bridge over the crossing. A branch line leaves the right-hand loop and rejoins it, giving the child a choice of routes. The main view looks forward from the train cab, and a small top-down map shows where the train is on the track.
 
-Click, tap, or press any normal key to make the train go faster. Repeated clicks make it speed up; if the child pauses, it gently slows down. There is no crash, score, or failure state.
+Click, tap, or press any normal key to make the train go faster. Repeated clicks make it speed up; if the child pauses, it gently slows down. Use the **Branch: OFF / ON** button to set the points for the next junction. The green branch track is shown alongside the main line on the map. There is no crash, score, or failure state.
 
 ## Design Goals
 
@@ -47,7 +47,7 @@ Click, tap, or press any normal key to make the train go faster. Repeated clicks
 | --- | --- |
 | Any normal keyboard key | Do the next action in the current game |
 | Big **Go** button | Do the next action or speed up the train |
-| Click/tap the train view | Speed up the train |
+| Click/tap the train view | Speed up the train |\n| **Branch: OFF / ON** button | Select the route at the next junction |
 
 Modifier shortcuts such as `Ctrl`, `Alt`, and `Meta` combinations are ignored so browser/system shortcuts still behave normally.
 
@@ -55,7 +55,7 @@ Modifier shortcuts such as `Ctrl`, `Alt`, and `Meta` combinations are ignored so
 
 - CSS-drawn farm scene with hills, fence, carrot mounds, dirt track, digger, troughs, and horses.
 - Three progressive levels with one, two, then three horses.
-- Canvas-drawn toy train driver view with a figure-eight track map and bridge crossing.
+- Canvas-drawn toy train driver view with a figure-eight track map, branch line and bridge crossing.
 - Real local sound effects for shovel digging, carrot crunching, and horse neighing.
 - Synthesized engine/tread movement sounds for the digger and gentle train chuffs.
 - Synthesized soft background music using the Web Audio API.
