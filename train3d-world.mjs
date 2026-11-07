@@ -3,6 +3,7 @@ import {
   TAU, BRANCH_START, BRANCH_END,
   getTrackPose, bridgeLift,
 } from "./train3d-track.mjs";
+import { makeBranchStation } from "./train3d-station.mjs";
 
 const brown = new THREE.MeshStandardMaterial({ color: 0x94603b, roughness: 0.82 });
 const sleepers = new THREE.MeshStandardMaterial({ color: 0x98734f, roughness: 0.84 });
@@ -43,7 +44,7 @@ function drawRails(group, route) {
   const isBranch = route === "branch";
   const start = isBranch ? BRANCH_START : 0;
   const end = isBranch ? BRANCH_END : TAU;
-  const count = isBranch ? 108 : 280;
+  const count = isBranch ? 320 : 280;
   const closed = !isBranch;
 
   for (const side of [-1.14, 1.14]) {
@@ -65,7 +66,7 @@ function drawRails(group, route) {
     stripe.castShadow = false;
   }
 
-  const tieCount = isBranch ? 38 : 113;
+  const tieCount = isBranch ? 95 : 113;
   const tieMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(3.45, 0.18, 0.62), sleepers, tieCount);
   tieMesh.receiveShadow = true;
   const dummy = new THREE.Object3D();
@@ -202,7 +203,7 @@ function makeStorybookLandscape(parent) {
 
 function addTracksideProps(parent) {
   makeStation(parent, -11.5, -15.9, red);
-  makeStation(parent, 33.5, -9.0, new THREE.MeshStandardMaterial({color:0x6d9ce0,roughness:0.7}));
+  makeBranchStation(parent);
   makeSignal(parent, getTrackPose(0.98), -1);
   makeSignal(parent, getTrackPose(5.63), 1);
   for (const x of [-34, -29, -25, 26, 31, 35]) {
@@ -232,8 +233,8 @@ export function createToyRailway(scene) {
   sun.position.set(-24, 52, 19);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
-  sun.shadow.camera.left = -48;
-  sun.shadow.camera.right = 48;
+  sun.shadow.camera.left = -57;
+  sun.shadow.camera.right = 57;
   sun.shadow.camera.top = 42;
   sun.shadow.camera.bottom = -42;
   sun.shadow.bias = -0.00012;
@@ -242,8 +243,8 @@ export function createToyRailway(scene) {
   const world = new THREE.Group();
   scene.add(world);
   // Wooden board with a real 3D grassy upper surface and timber sides.
-  block(world, 0, -0.65, 0, 82, 1.0, 58, brown);
-  const field = mesh(world, new THREE.PlaneGeometry(82, 58), grass, 0, -0.12, 0);
+  block(world, 0, -0.65, 0, 100, 1.0, 58, brown);
+  const field = mesh(world, new THREE.PlaneGeometry(100, 58), grass, 0, -0.12, 0);
   field.rotation.x = -Math.PI / 2;
   field.castShadow = false;
   field.receiveShadow = true;

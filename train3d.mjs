@@ -1,8 +1,9 @@
 import * as THREE from "three";
 import {
-  TAU, BRANCH_START, BRANCH_END, WAGON_OFFSETS,
-  bridgeLift, getTrackPose, normaliseAngle,
-  crossesAngle, routeForCar, turnoutsForTrain,
+  TAU, BRANCH_START, BRANCH_END, BRANCH_STATION_ANGLE,
+  BRANCH_LENGTH, BRANCH_SPEED_FACTOR, WAGON_OFFSETS,
+  bridgeLift, getTrackPose, isOnBranchSection, normaliseAngle,
+  crossesAngle, getWagonAngle, routeForCar, turnoutsForTrain,
 } from "./train3d-track.mjs";
 import { loadStorybookTrain } from "./train3d-gltf.mjs";
 import { createToyRailway } from "./train3d-world.mjs";
@@ -137,7 +138,8 @@ function drawMap() {
   ctx.clearRect(0, 0, w, h);
   ctx.fillStyle = "#e6bf86";
   ctx.fillRect(0, 0, w, h);
-  const scaleX = 3.25, scaleZ = 3.4;
+  // The new branch stretches to x=32; keep all tracks inside the inset map.
+  const scaleX = 2.5, scaleZ = 3.4;
   const mapXY = (pose) => [w * 0.48 + pose.x * scaleX, h * 0.5 + pose.z * scaleZ];
   function trace(route, start, end, sampleCount, lineWidth, colour) {
     ctx.beginPath();
@@ -155,8 +157,16 @@ function drawMap() {
   }
   trace("main", 0, TAU, 260, 14, "#a36f43");
   trace("main", 0, TAU, 260, 6, "#f4d29c");
-  trace("branch", BRANCH_START, BRANCH_END, 100, 14, state.branchSelected ? "#529b52" : "#a36f43");
-  trace("branch", BRANCH_START, BRANCH_END, 100, 6, "#f4d29c");
+  trace("branch", BRANCH_START, BRANCH_END, 220, 14, state.branchSelected ? "#529b52" : "#a36f43");
+  trace("branch", BRANCH_START, BRANCH_END, 220, 6, "#f4d29c");
+  // The stop appears beside the long straight section.
+  const [haltX, haltY] = mapXY(getTrackPose(BRANCH_STATION_ANGLE, "branch"));
+  ctx.fillStyle = "#315d89";
+  ctx.fillRect(haltX + 6, haltY - 12, 8, 24);
+  ctx.fillStyle = "#253e52";
+  ctx.font = "bold 10px sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("HALT", haltX, haltY - 18);
   trace("main", -0.47, 0.47, 42, 16, "#936035");
   trace("main", -0.47, 0.47, 42, 7, "#ffe1a9");
 
@@ -166,7 +176,7 @@ function drawMap() {
   ctx.strokeStyle = "#fff9e5"; ctx.lineWidth = 2; ctx.stroke();
 
   [...WAGON_OFFSETS].reverse().forEach((offset, index) => {
-    const t = state.angle - offset;
+    const t = getWagonAngle(state.angle, offset, state.branchTrip);
     const p = getTrackPose(t, routeForCar(t, state.branchTrip));
     const [x, y] = mapXY(p);
     ctx.save();
@@ -214,11 +224,12 @@ function followCamera(enginePose, deltaSeconds) {
   let wanted;
   let looking;
   if (mode === "driver") {
-    wanted = at.clone().addScaledVector(dir, 1.78).add(new THREE.Vector3(0, 2.6, 0));
-    looking = at.clone().addScaledVector(dir, 13).add(new THREE.Vector3(0, 1.0, 0));
+    // Raise the driver's eyeline by 0.85 units for more track visibility.
+    wanted = at.clone().addScaledVector(dir, 1.78).add(new THREE.Vector3(0, 3.45, 0));
+    looking = at.clone().addScaledVector(dir, 13).add(new THREE.Vector3(0, 1.6, 0));
   } else if (mode === "overview") {
-    wanted = new THREE.Vector3(35, 43, 43);
-    looking = new THREE.Vector3(1, 0, 0);
+    wanted = new THREE.Vector3(42, 52, 54);
+    looking = new THREE.Vector3(7, 0, 0);
   } else {
     // Three-quarter view from the front, so the friendly engine's face is
     // visible while it pulls its colourful carriages around the line.
@@ -277,15 +288,24 @@ function tick(dt) {
   const before = state.angle;
   const rise = (bridgeLift(state.angle + 0.02) - bridgeLift(state.angle)) / 0.02;
   state.speed = Math.max(0, state.speed - (DRAG + Math.max(0, rise) * 0.015) * dt);
-  state.angle = normaliseAngle(state.angle + state.speed * dt);
+  // Match the physical speed on the longer branch. It now takes more time
+  // to complete than the direct loop instead of rushing past the station.
+  const travelFactor = state.branchTrip && isOnBranchSection(before)
+    ? BRANCH_SPEED_FACTOR : 1;
+  state.angle = normaliseAngle(state.angle + state.speed * travelFactor * dt);
 
   const junctions = turnoutsForTrain(state, before, state.angle);
   state.branchTrip = junctions.branchTrip;
   if (junctions.entered) showNotice("Taking the branch line! 🚂");
+  if (state.branchTrip && crossesAngle(before, state.angle, BRANCH_STATION_ANGLE)) {
+    showNotice("Welcome to Bluebell Halt! 🚉", 2.5);
+    makeTone(783.99, 0.24, 0.018, "sine");
+    makeTone(1046.50, 0.33, 0.018, "sine", 0.24);
+  }
 
   const enginePose = setVehiclePose(engine, state.angle);
   wagons.forEach((wagon, index) => {
-    setVehiclePose(wagon, state.angle - WAGON_OFFSETS[index]);
+    setVehiclePose(wagon, getWagonAngle(state.angle, WAGON_OFFSETS[index], state.branchTrip));
   });
   [engine, ...wagons].forEach((vehicle) => vehicle.wheels.forEach((wheel) => {
     wheel.rotation.x += state.speed * dt * 15;
@@ -359,7 +379,8 @@ async function start() {
     scene.add(engine.group, ...wagons.map((wagon) => wagon.group));
     smokeGeometry = new THREE.SphereGeometry(1, 10, 8);
     setVehiclePose(engine, state.angle);
-    wagons.forEach((wagon, i) => setVehiclePose(wagon, state.angle - WAGON_OFFSETS[i]));
+    wagons.forEach((wagon, i) => setVehiclePose(wagon,
+      getWagonAngle(state.angle, WAGON_OFFSETS[i], state.branchTrip)));
     followCamera(getTrackPose(state.angle, routeForCar(state.angle, state.branchTrip)), 2);
     resize();
     drawMap();
@@ -424,6 +445,8 @@ async function start() {
         camera: camera.position.toArray(), direction: viewDirection.toArray(),
         cameraTarget: cameraTarget.toArray(), enginePosition: engine.group.position.toArray(),
         sceneChildren: scene.children.length,
+        branchLength: BRANCH_LENGTH,
+        stationPresent: Boolean(scene.getObjectByName("Bluebell Halt branch station")),
         track, canvasWidth: canvas.width, canvasHeight: canvas.height,
         sceneBackground: scene.background.getHexString(),
         drawCalls: renderer.info.render.calls, triangles: renderer.info.render.triangles,

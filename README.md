@@ -37,15 +37,15 @@ Click, tap, or press any normal key to make the train go faster. Repeated clicks
 
 The optional 3D prototype at `train3d.html` uses **Three.js 0.187.0** via a pinned CDN import map. Unlike the original canvas-drawn game, its rails, wooden bridge, stations, trees, locomotive and two carriages are actual lit 3D meshes, with shadows and moving wheels. A small 2D inset is only a route map.
 
-The original figure-eight centreline is retained (x = sin(t), y = 0.58 sin(t) cos(t)), rescaled to world coordinates. The elevated bridge clears the crossing at t=0. A second line leaves the right-hand loop at t=0.55 and rejoins it at t=2.59; its offset and tangent both reach zero at the turnouts. The **Branch** button sets the points for the next junction. The whole train follows that route, including both carriages.
+The original figure-eight centreline is retained (x = sin(t), y = 0.58 sin(t) cos(t)), rescaled to world coordinates. The elevated bridge clears the crossing at t=0. The extended branch leaves the right-hand loop at t=0.55 and rejoins it at t=2.59. It has three genuinely straight sections, two connecting curves and **Bluebell Halt**, a 3D station with a platform, canopy, benches, lamps and station name board. Its start and end positions and directions match the existing junctions. The detour measures about 73 world units compared with about 28 on the direct section. The train travels at a consistent physical speed and therefore takes longer on the branch. The **Branch** button sets the points for the next junction. The whole train follows that route, including both carriages.
 
-The user can switch between a follow camera (shows the locomotive model), driver view and raised overview. The game remains forgiving: there is no collision/failure state or scoring. In the 3D game, **Space** sounds the whistle, **B** switches the points and **V** changes the camera. **Every other unassigned key operates GO**, including letters, numbers, arrow keys, Backspace, Delete and Enter. A tap on the game or the GO button also accelerates. Tab, function keys, Ctrl/Alt/Meta shortcuts and editing fields retain their normal browser behaviour. Enter or Space on a focused control activates that control rather than triggering the global shortcut.
+The user can switch between a follow camera (shows the locomotive model), a slightly higher driver view and raised overview. The game remains forgiving: there is no collision/failure state or scoring. In the 3D game, **Space** sounds the whistle, **B** switches the points and **V** changes the camera. **Every other unassigned key operates GO**, including letters, numbers, arrow keys, Backspace, Delete and Enter. A tap on the game or the GO button also accelerates. Tab, function keys, Ctrl/Alt/Meta shortcuts and editing fields retain their normal browser behaviour. Enter or Space on a focused control activates that control rather than triggering the global shortcut.
 
 The storybook locomotive and coaches are stored as self-contained glTF assets in `assets/models/`. They were designed for this game, so there is no dependency on third-party character artwork.
 
 ### Storybook character train and glTF models
 
-The 3D game now features an original, cheerful blue tank engine named **Bluebell**, with a soft grey smiling face, movable eyes, yellow lining, black funnel and red buffer beam. It pulls two colourful passenger coaches through a brighter landscape with rounded trees, green hills, stations, a water tower and level-crossing signals. It is inspired by the friendly British children's railway tradition, but does not use Thomas branding, character artwork, or copied assets.
+The 3D game now features an original, cheerful blue tank engine named **Bluebell**, with a soft grey smiling face, movable eyes, yellow lining, black funnel and red buffer beam. It pulls two colourful passenger coaches through a brighter landscape with rounded trees, green hills, stations including Bluebell Halt on the extended branch, a water tower and level-crossing signals. It is inspired by the friendly British children's railway tradition, but does not use Thomas branding, character artwork, or copied assets.
 
 The locomotive and passenger coach are authored as real, self-contained **glTF 2.0 models**. Their geometry, materials and named animation pivots are stored in:
 
@@ -179,7 +179,8 @@ The Playwright tests check keyboard play, button play, level progression, horse 
 ├── train3d-track.mjs        # Original figure-eight and branch parametric geometry
 ├── train3d-model.mjs        # Fallback 3D locomotive/carriage meshes
 ├── train3d-gltf.mjs         # Loads animated glTF character models
-├── train3d-world.mjs        # Rails, elevated bridge, stations and scenery
+├── train3d-world.mjs        # Rails, elevated bridge and scenery
+├── train3d-station.mjs      # Bluebell Halt station along the branch straight
 ├── train.html                # Toy train game markup
 ├── styles.css                # Farm, digger, train, horses, and responsive visual styling
 ├── game.js                   # Gameplay loop, input handling, animation timing, and audio
