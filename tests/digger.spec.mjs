@@ -150,3 +150,40 @@ test.describe("toy train driver game", () => {
     expect(rendered[1]).toBeGreaterThan(100);
   });
 });
+
+test.describe("toy train branch line", () => {
+  test("switch button selects the branch at the junction", async ({ page }) => {
+    await page.goto(trainUrl);
+    const branchButton = page.getByTestId("train-branch");
+    await expect(branchButton).toHaveAttribute("aria-pressed", "false");
+    await branchButton.click();
+    await expect(branchButton).toHaveAttribute("aria-pressed", "true");
+    expect(await page.evaluate(() => window.trainGame.getState().branchSelected)).toBe(true);
+
+    await page.evaluate(() => {
+      state.angle = 0.54;
+      state.speed = 2;
+      stepTrain(0.05);
+    });
+
+    expect(await page.evaluate(() => window.trainGame.getState().route)).toBe("branch");
+    await expect(page.getByTestId("train-message")).toHaveText("On the branch line!");
+  });
+
+  test("main route remains available and keyboard activation works", async ({ page }) => {
+    await page.goto(trainUrl);
+    const branchButton = page.getByTestId("train-branch");
+    await branchButton.focus();
+    await page.keyboard.press("Enter");
+    await expect(branchButton).toHaveAttribute("aria-pressed", "true");
+    await page.keyboard.press("Enter");
+    await expect(branchButton).toHaveAttribute("aria-pressed", "false");
+
+    await page.evaluate(() => {
+      state.angle = 0.54;
+      state.speed = 2;
+      stepTrain(0.05);
+    });
+    expect(await page.evaluate(() => window.trainGame.getState().route)).toBe("main");
+  });
+});
