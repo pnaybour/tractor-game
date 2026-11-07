@@ -145,7 +145,7 @@ function makeSwitch(parent) {
 
 function addTracksideProps(parent) {
   makeStation(parent, -11.5, -15.9, red);
-  makeStation(parent, 27.8, -5.0, new THREE.MeshStandardMaterial({color:0x6d9ce0,roughness:0.7}));
+  makeStation(parent, 33.5, -9.0, new THREE.MeshStandardMaterial({color:0x6d9ce0,roughness:0.7}));
   makeSignal(parent, getTrackPose(0.98), -1);
   makeSignal(parent, getTrackPose(5.63), 1);
   for (const x of [-34, -29, -25, 26, 31, 35]) {
