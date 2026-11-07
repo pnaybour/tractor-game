@@ -1443,6 +1443,42 @@ body {
   pointer-events: none;
 }
 
+.train-controls {
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.train-branch {
+  min-height: 3.7rem;
+  min-width: 9rem;
+  padding: 0.65rem 1rem;
+  border: 0.2rem solid #725328;
+  border-radius: 0.75rem;
+  background: #ffe0a2;
+  color: #3f2c17;
+  font-size: clamp(1.1rem, 3vw, 1.5rem);
+  font-weight: 950;
+  cursor: pointer;
+  touch-action: manipulation;
+  box-shadow: 0 0.25rem 0 #725328;
+}
+
+.train-branch[aria-pressed="true"] {
+  background: #75dd6a;
+  border-color: #286c31;
+  color: #153a1b;
+  box-shadow: 0 0.25rem 0 #286c31;
+}
+
+.train-branch:focus-visible {
+  outline: 0.2rem solid #17351f;
+  outline-offset: 0.2rem;
+}
+
 .train-action {
   z-index: 3;
   justify-self: center;
