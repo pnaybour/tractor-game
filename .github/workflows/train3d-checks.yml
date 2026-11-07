@@ -1,0 +1,32 @@
+name: Verify 3D Railway
+
+on:
+  push:
+    branches:
+      - feature/real-3d-train
+  pull_request:
+    paths:
+      - "train3d*"
+      - "assets/models/**"
+      - "tests/*3d*"
+      - "package.json"
+      - ".github/workflows/train3d-checks.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Test track and glTF models
+        run: npm run test:3d
+      - name: Check JavaScript syntax
+        run: |
+          node --check train3d.mjs
+          node --check train3d-gltf.mjs
+          node --check train3d-world.mjs
+          node --check train3d-model.mjs
