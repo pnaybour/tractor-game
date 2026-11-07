@@ -4,11 +4,11 @@ import {
   bridgeLift, getTrackPose, normaliseAngle,
   crossesAngle, routeForCar, turnoutsForTrain,
 } from "./train3d-track.mjs";
-import { makeLocomotive, makeWagon } from "./train3d-model.mjs";
+import { loadStorybookTrain } from "./train3d-gltf.mjs";
 import { createToyRailway } from "./train3d-world.mjs";
 
-// Three.js WebGL is the primary renderer; the little 2D canvas is only a
-// secondary route diagram. The train, track and scene are real 3D meshes.
+// Three.js WebGL and locally hosted glTF 2.0 train assets form the primary
+// experience. The little 2D canvas is only a secondary route diagram.
 const MAX_SPEED = 1.25;
 const BOOST = 0.34;
 const DRAG = 0.11;
@@ -35,6 +35,9 @@ const state = {
   smokeTimer: 0,
   smoke: [],
   noticeUntil: 0,
+  blinkTimer: 3.7,
+  blinkRemaining: 0,
+  modelFormat: "loading",
 };
 
 function showNotice(message, seconds = 2) {
@@ -203,8 +206,12 @@ function followCamera(enginePose, deltaSeconds) {
     wanted = new THREE.Vector3(35, 43, 43);
     looking = new THREE.Vector3(1, 0, 0);
   } else {
-    wanted = at.clone().addScaledVector(dir, -10.5).add(new THREE.Vector3(0, 7.5, 0));
-    looking = at.clone().addScaledVector(dir, 3.9).add(new THREE.Vector3(0, 1.6, 0));
+    // Three-quarter view from the front, so the friendly engine's face is
+    // visible while it pulls its colourful carriages around the line.
+    const side = new THREE.Vector3(dir.z, 0, -dir.x);
+    wanted = at.clone().addScaledVector(dir, 9.6).addScaledVector(side, 5.4)
+      .add(new THREE.Vector3(0, 5.7, 0));
+    looking = at.clone().addScaledVector(dir, -0.6).add(new THREE.Vector3(0, 1.5, 0));
   }
   const alpha = 1 - Math.exp(-deltaSeconds * (mode === "driver" ? 9 : 4.8));
   camera.position.lerp(wanted, alpha);
@@ -286,6 +293,16 @@ function tick(dt) {
     state.smokeTimer = 0;
   }
   moveSmoke(dt);
+  if (engine.eyes?.length) {
+    state.blinkTimer -= dt;
+    if (state.blinkTimer <= 0) {
+      state.blinkRemaining = 0.13;
+      state.blinkTimer = 3.5 + Math.random() * 3.3;
+    }
+    state.blinkRemaining = Math.max(0, state.blinkRemaining - dt);
+    const eyeHeight = state.blinkRemaining > 0 ? 0.12 : 1;
+    engine.eyes.forEach((eye) => { eye.scale.y = eyeHeight; });
+  }
   followCamera(enginePose, dt);
   const currentRoute = routeForCar(state.angle, state.branchTrip);
   routeEl.textContent = currentRoute === "branch" ? "↗ Branch line" : "↝ Main line";
@@ -304,7 +321,7 @@ function resize() {
   camera.updateProjectionMatrix();
 }
 
-function start() {
+async function start() {
   try {
     renderer = new THREE.WebGLRenderer({
       canvas, antialias: true, powerPreference: "high-performance",
@@ -320,8 +337,11 @@ function start() {
     camera.position.set(-30, 11, 15);
     cameraTarget.set(0, 1.2, 0);
     railway = createToyRailway(scene);
-    engine = makeLocomotive();
-    wagons = [makeWagon(0x4593d4, "blocks"), makeWagon(0x9a65c1, "logs")];
+    showNotice("Loading the friendly 3D train…", 8);
+    const models = await loadStorybookTrain();
+    engine = models.engine;
+    wagons = models.wagons;
+    state.modelFormat = models.format;
     scene.add(engine.group, ...wagons.map((wagon) => wagon.group));
     smokeGeometry = new THREE.SphereGeometry(1, 10, 8);
     setVehiclePose(engine, state.angle);
@@ -372,6 +392,7 @@ function start() {
         view: CAMERA_MODES[state.cameraMode],
         trackShape: "figure-eight",
         renderer: "three.js",
+        modelFormat: state.modelFormat,
       };
     },
     boost, chooseBranch, changeCamera, whistle,
