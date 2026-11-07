@@ -26,6 +26,7 @@ const failureEl = document.getElementById("train3d-error");
 const state = {
   angle: -Math.PI / 2,
   speed: 0,
+  boostCount: 0,
   branchSelected: false,
   branchTrip: false,
   cameraMode: 0,
@@ -79,6 +80,7 @@ function whistle() {
 
 function boost() {
   enableAudio();
+  state.boostCount += 1;
   state.speed = Math.min(MAX_SPEED, state.speed + BOOST);
   showNotice("Choo choo!", 0.8);
   makeTone(390, 0.10, 0.007, "triangle");
@@ -102,20 +104,28 @@ function changeCamera() {
 }
 
 function handleKeyDown(event) {
+  // Preserve browser/system shortcuts, editable fields and key-repeat protection.
   if (event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
-  // Do not hijack standard focused links, buttons, or editable controls.
-  if (event.target.closest?.("button, a, input, textarea, select, [contenteditable]")) return;
-  if (event.key === " " || event.code === "Space") {
-    event.preventDefault();
+  if (event.target.closest?.("input, textarea, select, [contenteditable]")) return;
+  // Tab and function keys belong to the browser, not the train controls.
+  if (event.key === "Tab" || /^F\d{1,2}$/.test(event.key)) return;
+
+  // Enter/Space on a focused button or link must activate that control normally.
+  const focusedControl = event.target.closest?.("button, a");
+  if (focusedControl && (event.key === "Enter" || event.key === " " || event.code === "Space")) {
+    return;
+  }
+
+  event.preventDefault();
+  const key = event.key.toLowerCase();
+  if (key === " " || event.code === "Space") {
     whistle();
-  } else if (event.key.toLowerCase() === "b") {
-    event.preventDefault();
+  } else if (key === "b") {
     chooseBranch();
-  } else if (event.key.toLowerCase() === "v") {
-    event.preventDefault();
+  } else if (key === "v") {
     changeCamera();
-  } else if (event.key.length === 1 || event.key === "Enter") {
-    event.preventDefault();
+  } else {
+    // Every other unassigned key, including arrows and editing keys, means GO.
     boost();
   }
 }
@@ -394,6 +404,7 @@ async function start() {
       return {
         angle: state.angle,
         speed: state.speed,
+        boostCount: state.boostCount,
         branchSelected: state.branchSelected,
         branchTrip: state.branchTrip,
         route: routeForCar(state.angle, state.branchTrip),
