@@ -211,9 +211,9 @@ function followCamera(enginePose, deltaSeconds) {
     // Three-quarter view from the front, so the friendly engine's face is
     // visible while it pulls its colourful carriages around the line.
     const side = new THREE.Vector3(dir.z, 0, -dir.x);
-    wanted = at.clone().addScaledVector(dir, 9.6).addScaledVector(side, 5.4)
-      .add(new THREE.Vector3(0, 5.7, 0));
-    looking = at.clone().addScaledVector(dir, -0.6).add(new THREE.Vector3(0, 1.5, 0));
+    wanted = at.clone().addScaledVector(dir, 8.0).addScaledVector(side, 4.6)
+      .add(new THREE.Vector3(0, 4.25, 0));
+    looking = at.clone().addScaledVector(dir, -0.5).add(new THREE.Vector3(0, 1.68, 0));
   }
   const alpha = 1 - Math.exp(-deltaSeconds * (mode === "driver" ? 9 : 4.8));
   camera.position.lerp(wanted, alpha);
