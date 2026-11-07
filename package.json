@@ -6,7 +6,7 @@
   "scripts": {
     "test": "playwright test",
     "test:headed": "playwright test --headed",
-    "test:3d": "node --test tests/track3d.test.mjs"
+    "test:3d": "node --test tests/track3d.test.mjs tests/models3d.test.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0"
