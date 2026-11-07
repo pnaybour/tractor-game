@@ -96,6 +96,8 @@ function changeCamera() {
   state.cameraMode = (state.cameraMode + 1) % CAMERA_MODES.length;
   const names = ["👀 FOLLOW VIEW", "🚂 DRIVER VIEW", "🗺️ OVERVIEW"];
   viewEl.textContent = names[state.cameraMode];
+  // Make view changes immediate, including on slower mobile devices.
+  followCamera(getTrackPose(state.angle, routeForCar(state.angle, state.branchTrip)), 2);
   showNotice(["Following the train!", "Driving the train!", "The whole railway!"][state.cameraMode]);
 }
 
@@ -348,6 +350,7 @@ async function start() {
     smokeGeometry = new THREE.SphereGeometry(1, 10, 8);
     setVehiclePose(engine, state.angle);
     wagons.forEach((wagon, i) => setVehiclePose(wagon, state.angle - WAGON_OFFSETS[i]));
+    followCamera(getTrackPose(state.angle, routeForCar(state.angle, state.branchTrip)), 2);
     resize();
     drawMap();
     showNotice("Press GO to start!", 3);
