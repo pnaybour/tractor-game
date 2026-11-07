@@ -43,6 +43,19 @@ The user can switch between a follow camera (shows the locomotive model), driver
 
 The first 3D model is constructed from custom, low-polygon 3D geometry in \`train3d-model.mjs\` so it remains lightweight and needs no separately hosted assets. The engine and carriages can later be replaced with Blender-exported glTF/GLB artwork using Three.js \`GLTFLoader\`. A suitable external asset source is Kenney's CC0 Train Kit: https://kenney.nl/assets/train-kit
 
+### Host the 3D game on Vercel
+
+Vercel can serve the 3D game as a **static website**, with no server, database or build system. The `vercel.json` file in this branch selects the **Other** framework, skips the build command, serves the repository root, and rewrites `/` to `/train3d.html`. On Vercel the 3D version is therefore the homepage; on GitHub Pages the existing digger home page is unchanged. The 3D game uses a pinned Three.js CDN import map.
+
+To deploy a Vercel preview without changing the existing live games:
+
+1. In Vercel, select **Add New → Project** and import `pnaybour/tractor-game` from GitHub.
+2. Set Framework Preset to **Other**. Leave Build Command blank; use root directory `.` and output directory `.` if prompted.
+3. Keep **main** as the production branch to preserve the existing live version. Vercel's integration can build a preview of the `feature/real-3d-train` pull request.
+4. Once the 3D preview has been tested and is approved, you can publish the 3D site from the feature branch by choosing it as the Vercel production branch, or merge it into main. GitHub Pages continues to serve the original `index.html` at its root in either case.
+
+**Important:** The Vercel account still needs to be linked to this GitHub repository. This branch is deployment-ready but does not itself create or publish a Vercel project.
+
 **Important:** The 3D prototype must be served over HTTP(S) and requires an internet connection to load the pinned Three.js module. The existing 2D train and digger games remain independent and work as before.
 
 Development smoke check: \`npm run test:3d\` runs Node-based geometry, bridge and turnout tests without a browser. A full browser/WebGL visual test should also be run before making this prototype the default.
