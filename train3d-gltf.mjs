@@ -16,7 +16,9 @@ function addShadowsAndCollectWheels(root) {
       object.receiveShadow = true;
       object.frustumCulled = true;
     }
-    if (/^wheel_/.test(object.name) && object.isGroup) wheels.push(object);
+    // glTFLoader may represent an empty pivot as Object3D rather than Group.
+    // Both support rotation; only the preserved node name matters.
+    if (/^wheel_/.test(object.name)) wheels.push(object);
   });
   return wheels;
 }
