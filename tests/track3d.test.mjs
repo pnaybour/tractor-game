@@ -4,7 +4,7 @@ import {
   TAU, BRANCH_START, BRANCH_END, BRANCH_STATION_ANGLE, BRANCH_STRAIGHTS,
   BRANCH_LENGTH, MAIN_SECTION_LENGTH, BRANCH_SPEED_FACTOR,
   WAGON_OFFSETS, BRIDGE_HEIGHT,
-  getTrackPose, bridgeLift, isOnBranchSection,
+  getTrackPose, getWagonAngle, bridgeLift, isOnBranchSection,
   crossesAngle, routeForCar, turnoutsForTrain,
 } from "../train3d-track.mjs";
 
@@ -110,5 +110,26 @@ test("the longer branch has a smooth heading and near-uniform travel steps", () 
   for (const step of steps) {
     assert.ok(Math.abs(step - average) / average < 0.08,
       "distance-based parameterisation should keep speed roughly constant");
+  }
+});
+
+
+test("both carriages retain their main-line spacing through the long diversion", () => {
+  for (const offset of WAGON_OFFSETS) {
+    // At the entry turnout and again at the exit, there must be no jump.
+    assert.ok(Math.abs(getWagonAngle(BRANCH_START, offset, true) -
+      (BRANCH_START - offset)) < 1e-3);
+    assert.ok(Math.abs(getWagonAngle(BRANCH_END + offset, offset, true) -
+      BRANCH_END) < 2e-3);
+
+    // On the station straight the carriages remain a sensible distance back.
+    const following = getWagonAngle(BRANCH_STATION_ANGLE, offset, true);
+    assert.ok(following > BRANCH_START && following < BRANCH_STATION_ANGLE);
+    const gap = (BRANCH_STATION_ANGLE - following) *
+      (BRANCH_LENGTH / (BRANCH_END - BRANCH_START));
+    assert.ok(gap >= 6 && gap < 16,
+      "carriages must not separate by the old oversized angular gap");
+    assert.ok(getTrackPose(following, "branch").x > 20,
+      "both coaches follow the new branch instead of the main loop");
   }
 });
