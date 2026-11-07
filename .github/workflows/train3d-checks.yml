@@ -1,0 +1,49 @@
+name: Verify 3D Railway
+
+on:
+  push:
+    branches:
+      - feature/real-3d-train
+  pull_request:
+    paths:
+      - "train3d*"
+      - "assets/models/**"
+      - "tests/*3d*"
+      - "package.json"
+      - ".github/workflows/train3d-checks.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Test track and glTF models
+        run: npm run test:3d
+      - name: Check JavaScript syntax
+        run: |
+          node --check train3d.mjs
+          node --check train3d-gltf.mjs
+          node --check train3d-world.mjs
+          node --check train3d-model.mjs
+      - name: Install Playwright Chromium
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Verify actual 3D rendering in Chromium
+        run: |
+          python3 -m http.server 5173 --bind 127.0.0.1 > /tmp/train3d-server.log 2>&1 &
+          npx playwright test tests/train3d.spec.mjs --project=chromium
+      - name: Save screenshot and browser diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bluebell-3d-browser-check
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7

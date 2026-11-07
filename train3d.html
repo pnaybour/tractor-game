@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#a9e6ff">
+  <title>Bluebell Railway – 3D Storybook Train</title>
+  <meta name="description" content="Drive a friendly blue 3D tank engine with a smiling face and two colourful coaches, over a bridge and down a branch railway.">
+  <link rel="stylesheet" href="train3d.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <main class="train3d-app">
+    <header class="topbar">
+      <nav aria-label="Games">
+        <a href="index.html">🚜 Digger</a>
+        <a href="train.html">🚂 Original train</a>
+        <a href="train3d.html" aria-current="page">3D train</a>
+      </nav>
+      <div class="title-lockup">
+        <h1>BLUEBELL <span>RAILWAY</span></h1>
+        <p>A friendly 3D storybook train adventure</p>
+      </div>
+      <div class="speed-readout" aria-label="Current train speed">
+        <span>SPEED</span><strong data-testid="train3d-speed">0</strong><span>/ 9</span>
+      </div>
+    </header>
+
+    <section class="scene-frame" aria-label="Interactive 3D toy railway">
+      <canvas id="train3d-canvas" data-testid="train3d-canvas" aria-label="3D view of the railway. Tap the picture to accelerate."></canvas>
+      <div class="status-panel" aria-live="polite" data-testid="train3d-message">Getting your train ready…</div>
+      <aside class="mini-map" aria-label="Track map">
+        <span>OUR TRACK</span>
+        <canvas id="train3d-map" width="220" height="156" aria-hidden="true"></canvas>
+      </aside>
+      <div class="view-indicator" data-testid="train3d-route">Main line</div>
+      <p class="fallback" id="train3d-error" hidden>3D graphics could not start. Please use a current browser with WebGL support and an internet connection, or play the <a href="train.html">original train game</a>.</p>
+    </section>
+
+    <div class="controls" role="group" aria-label="Train controls">
+      <button type="button" class="go-button" id="train3d-go" data-testid="train3d-go">🚂 GO!</button>
+      <button type="button" class="whistle-button" id="train3d-whistle" data-testid="train3d-whistle">📣 WHISTLE</button>
+      <button type="button" class="branch-button" id="train3d-branch" data-testid="train3d-branch" aria-pressed="false">↗ BRANCH: OFF</button>
+      <button type="button" class="camera-button" id="train3d-view" data-testid="train3d-view">👀 FOLLOW VIEW</button>
+    </div>
+
+    <footer class="footer-note">
+      <p>Tap <strong>GO</strong> or press any letter to drive. Choose <strong>BRANCH</strong> to change the points. Press <strong>Space</strong> for a whistle and <strong>V</strong> to change the camera.</p>
+      <p class="prototype-tag">3D experiment · The original train game is still available.</p>
+    </footer>
+  </main>
+  <script type="module" src="train3d.mjs"></script>
+</body>
+</html>
