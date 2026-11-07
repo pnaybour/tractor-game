@@ -376,7 +376,8 @@ async function start() {
     state.frameCount += 1;
     const dt = state.lastFrame ? Math.min(0.05, (timestamp - state.lastFrame) / 1000) : 0;
     state.lastFrame = timestamp;
-    if (!document.hidden && !failureEl.hidden) {
+    // Render normally while the fallback/error panel is hidden.
+    if (!document.hidden && failureEl.hidden) {
       tick(dt);
       renderer.render(scene, camera);
       state.renderCount += 1;
