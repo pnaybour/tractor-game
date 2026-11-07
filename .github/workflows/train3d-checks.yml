@@ -30,3 +30,20 @@ jobs:
           node --check train3d-gltf.mjs
           node --check train3d-world.mjs
           node --check train3d-model.mjs
+      - name: Install Playwright Chromium
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Verify actual 3D rendering in Chromium
+        run: |
+          python3 -m http.server 5173 --bind 127.0.0.1 > /tmp/train3d-server.log 2>&1 &
+          npx playwright test tests/train3d.spec.mjs --project=chromium
+      - name: Save screenshot and browser diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bluebell-3d-browser-check
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
