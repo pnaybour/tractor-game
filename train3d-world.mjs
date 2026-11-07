@@ -100,13 +100,20 @@ function drawBridge(group) {
 }
 
 function makeTree(parent, x, z, scale = 1) {
+  // Soft rounded storybook trees rather than sharp toy conifers.
   const group = new THREE.Group();
   group.position.set(x, 0, z);
   parent.add(group);
-  mesh(group, new THREE.CylinderGeometry(0.31 * scale, 0.40 * scale, 1.7 * scale, 9), brown, 0, 0.85 * scale, 0);
-  for (const [y, radius] of [[1.8, 1.65], [2.7, 1.28], [3.55, 0.86]]) {
-    mesh(group, new THREE.ConeGeometry(radius * scale, 2.55 * scale, 8), y === 3.55 ? leafGreen : darkGreen, 0, y * scale, 0);
-  }
+  mesh(group, new THREE.CylinderGeometry(0.31 * scale, 0.44 * scale, 2.5 * scale, 10), brown, 0, 1.2 * scale, 0);
+  const crown = [
+    [-0.9, 2.6, 0.1, 1.3], [0.7, 2.7, -0.2, 1.42],
+    [0.1, 3.38, 0.15, 1.5], [-0.25, 2.45, 0.5, 1.24],
+  ];
+  crown.forEach(([cx, cy, cz, radius], index) => {
+    mesh(group, new THREE.SphereGeometry(radius * scale, 13, 10),
+      index % 2 ? leafGreen : darkGreen,
+      cx * scale, cy * scale, cz * scale);
+  });
 }
 
 function makeStation(parent, x, z, titleColor = red) {
@@ -143,6 +150,54 @@ function makeSwitch(parent) {
   return marker;
 }
 
+function makeStorybookLandscape(parent) {
+  // Puffy green hills in the distance give the scene a picture-book setting.
+  const hills = [
+    {x:-28,z:-35,rx:19,ry:6,rz:12}, {x:2,z:-41,rx:25,ry:9,rz:13},
+    {x:33,z:-39,rx:19,ry:7,rz:14}, {x:-36,z:30,rx:14,ry:5,rz:8},
+  ];
+  const hillPaint = new THREE.MeshStandardMaterial({color:0x75bd70,roughness:1});
+  hills.forEach(({x,z,rx,ry,rz}) => {
+    const hill = mesh(parent,new THREE.SphereGeometry(1,22,12),hillPaint,x,-1.5,z);
+    hill.scale.set(rx,ry,rz);
+    hill.castShadow = false;
+  });
+
+  // White rail fences, small hedgerows and bright flowers mark out the toy land.
+  const fencePaint = new THREE.MeshStandardMaterial({color:0xfff2d9,roughness:0.76});
+  for (const z of [-25.0,25.0]) {
+    for (let x=-35; x<=35; x+=7) {
+      block(parent,x,0.65,z,0.20,1.5,0.20,fencePaint);
+      if (x<35) {
+        block(parent,x+3.5,1.08,z,7.05,0.14,0.16,fencePaint);
+        block(parent,x+3.5,0.53,z,7.05,0.13,0.16,fencePaint);
+      }
+    }
+  }
+
+  const flowerColours = [
+    new THREE.MeshStandardMaterial({color:0xffd558,roughness:.82}),
+    new THREE.MeshStandardMaterial({color:0xf18bc0,roughness:.82}),
+    new THREE.MeshStandardMaterial({color:0xffe8ed,roughness:.82}),
+    new THREE.MeshStandardMaterial({color:0x9baff1,roughness:.82}),
+  ];
+  const leafPaint = new THREE.MeshStandardMaterial({color:0x4da965,roughness:.95});
+  for (let i=0;i<32;i++) {
+    const x=-32+(i*19%64);
+    const z=17+(i*7%7);
+    const flower = mesh(parent,new THREE.SphereGeometry(0.26,8,6),
+      flowerColours[i%flowerColours.length],x,0.26,z);
+    flower.castShadow = false;
+    mesh(parent,new THREE.CylinderGeometry(.04,.05,.36,6),leafPaint,x,0.06,z);
+  }
+
+  // A cheerful miniature water tower beside the branch platform.
+  const stone = new THREE.MeshStandardMaterial({color:0xf4e1bb,roughness:.9});
+  mesh(parent,new THREE.CylinderGeometry(.84,.98,4.3,14),stone,31.5,2.25,-18.4);
+  mesh(parent,new THREE.CylinderGeometry(1.38,1.38,1.32,20),new THREE.MeshStandardMaterial({color:0xbd4942,roughness:.64}),31.5,4.98,-18.4);
+  mesh(parent,new THREE.ConeGeometry(1.52,.72,16),brown,31.5,6.05,-18.4);
+}
+
 function addTracksideProps(parent) {
   makeStation(parent, -11.5, -15.9, red);
   makeStation(parent, 33.5, -9.0, new THREE.MeshStandardMaterial({color:0x6d9ce0,roughness:0.7}));
@@ -168,8 +223,8 @@ function addTracksideProps(parent) {
 }
 
 export function createToyRailway(scene) {
-  scene.background = new THREE.Color(0xa9e6ff);
-  scene.fog = new THREE.Fog(0xbdeaff, 85, 165);
+  scene.background = new THREE.Color(0xb8e9ff);
+  scene.fog = new THREE.Fog(0xd0f3ff, 95, 185);
   scene.add(new THREE.HemisphereLight(0xdff5ff, 0x7b9865, 2.2));
   const sun = new THREE.DirectionalLight(0xfff1d4, 2.5);
   sun.position.set(-24, 52, 19);
@@ -193,6 +248,7 @@ export function createToyRailway(scene) {
   drawRails(world, "main");
   drawRails(world, "branch");
   drawBridge(world);
+  makeStorybookLandscape(world);
   addTracksideProps(world);
   const switchLight = makeSwitch(world);
 
