@@ -6,7 +6,7 @@
     <title>Toy Train Driver</title>
     <meta
       name="description"
-      content="A gentle first-person toy train game with a figure-eight wooden track, bridge, and simple keyboard or click controls. Press space for the whistle."
+      content="A gentle first-person toy train game with a figure-eight wooden track, branch line, bridge, and simple keyboard or click controls. Press space for the whistle."
     />
     <meta name="theme-color" content="#6ec8ff" />
     <meta property="og:title" content="Toy Train Driver" />
@@ -44,9 +44,14 @@
         <div class="train-message" data-testid="train-message">Ready</div>
       </section>
 
-      <button class="train-action" type="button" data-testid="train-action" aria-label="Make the train go faster">
-        Go
-      </button>
+      <div class="train-controls">
+        <button class="train-branch" type="button" data-testid="train-branch" aria-label="Choose the branch line at the next junction" aria-pressed="false">
+          Branch: OFF
+        </button>
+        <button class="train-action" type="button" data-testid="train-action" aria-label="Make the train go faster">
+          Go
+        </button>
+      </div>
     </main>
 
     <script src="train.js"></script>
