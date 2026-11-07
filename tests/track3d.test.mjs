@@ -1,7 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  TAU, BRANCH_START, BRANCH_END, WAGON_OFFSETS, BRIDGE_HEIGHT,
+  TAU, BRANCH_START, BRANCH_END, BRANCH_STATION_ANGLE, BRANCH_STRAIGHTS,
+  BRANCH_LENGTH, MAIN_SECTION_LENGTH, BRANCH_SPEED_FACTOR,
+  WAGON_OFFSETS, BRIDGE_HEIGHT,
   getTrackPose, bridgeLift, isOnBranchSection,
   crossesAngle, routeForCar, turnoutsForTrain,
 } from "../train3d-track.mjs";
@@ -51,4 +53,62 @@ test("turnout crossing works around the circular lap", () => {
   assert.equal(crossesAngle(TAU - 0.04, 0.04, 0), true);
   assert.equal(crossesAngle(1.0, 1.1, 2.0), false);
   assert.equal(crossesAngle(2.0, 2.1, 2.05), true);
+});
+
+
+test("the longer branch contains three genuinely straight sections", () => {
+  assert.equal(BRANCH_STRAIGHTS.length, 3);
+  assert.ok(BRANCH_LENGTH > MAIN_SECTION_LENGTH * 2.2,
+    "the new branch should be substantially longer than the direct loop");
+  assert.ok(BRANCH_SPEED_FACTOR < 0.5 && BRANCH_SPEED_FACTOR > 0.25,
+    "the train should take correspondingly longer to travel the branch");
+  for (const { start, end, length } of BRANCH_STRAIGHTS) {
+    assert.ok(length >= 7.99, "each straight should be at least eight world units long");
+    const first = getTrackPose(start + (end - start) * 0.15, "branch");
+    const centre = getTrackPose(start + (end - start) * 0.50, "branch");
+    const last = getTrackPose(start + (end - start) * 0.85, "branch");
+    const crossProduct = (centre.x - first.x) * (last.z - first.z) -
+      (centre.z - first.z) * (last.x - first.x);
+    assert.ok(Math.abs(crossProduct) < 1e-7, "straight points must be collinear");
+    assert.ok(Math.abs(first.tx - last.tx) < 1e-9);
+    assert.ok(Math.abs(first.tz - last.tz) < 1e-9);
+  }
+});
+
+test("the Bluebell Halt station is centred on the long straight beside the rails", () => {
+  const [departure, middle, arrival] = BRANCH_STRAIGHTS;
+  assert.ok(BRANCH_STATION_ANGLE > middle.start);
+  assert.ok(BRANCH_STATION_ANGLE < middle.end);
+  const pose = getTrackPose(BRANCH_STATION_ANGLE, "branch");
+  assert.ok(Math.abs(pose.x - 32) < 1e-7);
+  assert.ok(Math.abs(pose.z) < 1e-7);
+  assert.equal(pose.route, "branch");
+  assert.ok(Math.abs(pose.tx) < 1e-9, "station track heads north/south");
+  assert.ok(Math.abs(pose.tz + 1) < 1e-9);
+  assert.ok(middle.length >= 19.99);
+  assert.ok(arrival.start > middle.end);
+  assert.ok(departure.end < middle.start);
+});
+
+test("the longer branch has a smooth heading and near-uniform travel steps", () => {
+  const points = [];
+  for (let i = 0; i <= 150; i++) {
+    const angle = BRANCH_START + (BRANCH_END - BRANCH_START) * i / 150;
+    const pose = getTrackPose(angle, "branch");
+    points.push(pose);
+    assert.ok(pose.x <= 34 && pose.x >= 9,
+      "the branch remains inside the railway board");
+    assert.ok(Math.abs(pose.z) <= 18);
+  }
+  const steps = points.slice(1).map((p, i) => {
+    const last = points[i];
+    const forward = p.tx * last.tx + p.tz * last.tz;
+    assert.ok(forward > 0.97, "track should not contain sudden sharp turns");
+    return Math.hypot(p.x - last.x, p.z - last.z);
+  });
+  const average = steps.reduce((a, b) => a + b, 0) / steps.length;
+  for (const step of steps) {
+    assert.ok(Math.abs(step - average) / average < 0.08,
+      "distance-based parameterisation should keep speed roughly constant");
+  }
 });
