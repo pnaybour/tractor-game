@@ -218,6 +218,70 @@ export function routeForCar(angle, branchTrip) {
   return branchTrip && isOnBranchSection(angle) ? "branch" : "main";
 }
 
+// Carriages must remain a fixed physical distance behind the engine. Using
+// the original 0.33 / 0.66 radian offsets on the much longer branch would
+// leave 12-24 world units between cars and make the train look disconnected.
+// The small main-line tables also preserve spacing across both turnouts.
+function measureMainArc(start, end, count = 180) {
+  const samples = [{ angle: start, distance: 0 }];
+  let last = mainPose(start);
+  let distance = 0;
+  for (let i = 1; i <= count; i += 1) {
+    const angle = start + (end - start) * i / count;
+    const point = mainPose(angle);
+    distance += Math.hypot(point.x - last.x, point.z - last.z);
+    samples.push({ angle, distance });
+    last = point;
+  }
+  return { samples, total: distance };
+}
+
+const mainBeforeJunction = measureMainArc(BRANCH_START - 1, BRANCH_START);
+const mainAfterJunction = measureMainArc(BRANCH_END, BRANCH_END + 1);
+
+function interpolateSample(table, value, byDistance = false) {
+  const items = table.samples;
+  const inputField = byDistance ? "distance" : "angle";
+  const outputField = byDistance ? "angle" : "distance";
+  const target = Math.max(items[0][inputField],
+    Math.min(items.at(-1)[inputField], value));
+  let low = 0;
+  let high = items.length - 1;
+  while (low + 1 < high) {
+    const mid = (low + high) >> 1;
+    if (items[mid][inputField] < target) low = mid;
+    else high = mid;
+  }
+  const first = items[low];
+  const second = items[high];
+  const denominator = second[inputField] - first[inputField];
+  const portion = denominator ? (target - first[inputField]) / denominator : 0;
+  return first[outputField] + (second[outputField] - first[outputField]) * portion;
+}
+
+export function getWagonAngle(engineAngle, wagonOffset, branchTrip) {
+  const engineParam = normaliseAngle(engineAngle);
+  if (!branchTrip || engineParam < BRANCH_START) {
+    return engineParam - wagonOffset;
+  }
+
+  const gap = mainBeforeJunction.total -
+    interpolateSample(mainBeforeJunction, BRANCH_START - wagonOffset);
+  if (engineParam <= BRANCH_END) {
+    const travelled = (engineParam - BRANCH_START) /
+      (BRANCH_END - BRANCH_START) * BRANCH_LENGTH;
+    if (travelled >= gap) return branchAngleAtDistance(travelled - gap);
+    return interpolateSample(mainBeforeJunction,
+      mainBeforeJunction.total + travelled - gap, true);
+  }
+
+  const afterExit = interpolateSample(mainAfterJunction, engineParam);
+  if (afterExit >= gap) {
+    return interpolateSample(mainAfterJunction, afterExit - gap, true);
+  }
+  return branchAngleAtDistance(BRANCH_LENGTH + afterExit - gap);
+}
+
 export function turnoutsForTrain(state, previousAngle, currentAngle) {
   // Changing points during a branch journey applies to the next trip.
   let active = state.branchTrip;
