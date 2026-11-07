@@ -3,7 +3,7 @@ import {
   TAU, BRANCH_START, BRANCH_END, BRANCH_STATION_ANGLE,
   BRANCH_LENGTH, BRANCH_SPEED_FACTOR, WAGON_OFFSETS,
   bridgeLift, getTrackPose, isOnBranchSection, normaliseAngle,
-  crossesAngle, routeForCar, turnoutsForTrain,
+  crossesAngle, getWagonAngle, routeForCar, turnoutsForTrain,
 } from "./train3d-track.mjs";
 import { loadStorybookTrain } from "./train3d-gltf.mjs";
 import { createToyRailway } from "./train3d-world.mjs";
@@ -176,7 +176,7 @@ function drawMap() {
   ctx.strokeStyle = "#fff9e5"; ctx.lineWidth = 2; ctx.stroke();
 
   [...WAGON_OFFSETS].reverse().forEach((offset, index) => {
-    const t = state.angle - offset;
+    const t = getWagonAngle(state.angle, offset, state.branchTrip);
     const p = getTrackPose(t, routeForCar(t, state.branchTrip));
     const [x, y] = mapXY(p);
     ctx.save();
@@ -305,7 +305,7 @@ function tick(dt) {
 
   const enginePose = setVehiclePose(engine, state.angle);
   wagons.forEach((wagon, index) => {
-    setVehiclePose(wagon, state.angle - WAGON_OFFSETS[index]);
+    setVehiclePose(wagon, getWagonAngle(state.angle, WAGON_OFFSETS[index], state.branchTrip));
   });
   [engine, ...wagons].forEach((vehicle) => vehicle.wheels.forEach((wheel) => {
     wheel.rotation.x += state.speed * dt * 15;
@@ -379,7 +379,8 @@ async function start() {
     scene.add(engine.group, ...wagons.map((wagon) => wagon.group));
     smokeGeometry = new THREE.SphereGeometry(1, 10, 8);
     setVehiclePose(engine, state.angle);
-    wagons.forEach((wagon, i) => setVehiclePose(wagon, state.angle - WAGON_OFFSETS[i]));
+    wagons.forEach((wagon, i) => setVehiclePose(wagon,
+      getWagonAngle(state.angle, WAGON_OFFSETS[i], state.branchTrip)));
     followCamera(getTrackPose(state.angle, routeForCar(state.angle, state.branchTrip)), 2);
     resize();
     drawMap();
