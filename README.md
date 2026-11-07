@@ -5,7 +5,8 @@ This is a tiny two-page website with gentle browser games for a very young child
 The pages are:
 
 - `index.html`: Green Digger Carrots
-- `train.html`: Toy Train Driver
+- `train.html`: Toy Train Driver (original 2D)
+- `train3d.html`: Toy Train Driver 3D (experimental)
 
 ## Green Digger Carrots
 
@@ -31,6 +32,20 @@ The digger does not keep a long action buffer. Extra keys pressed while the digg
 Toy Train Driver is a first-person wooden toy train game on a classic Brio-style figure-eight track with a little bridge over the crossing. A branch line leaves the right-hand loop and rejoins it, giving the child a choice of routes. The main view looks forward from the train cab, and a small top-down map shows where the train is on the track.
 
 Click, tap, or press any normal key to make the train go faster. Repeated clicks make it speed up; if the child pauses, it gently slows down. Use the **Branch: OFF / ON** button to set the points for the next junction. The green branch track is shown alongside the main line on the map. There is no crash, score, or failure state.
+
+## Toy Train Driver 3D — experimental
+
+The optional 3D prototype at \`train3d.html\` uses **Three.js 0.187.0** via a pinned CDN import map. Unlike the original canvas-drawn game, its rails, wooden bridge, stations, trees, locomotive and two carriages are actual lit 3D meshes, with shadows and moving wheels. A small 2D inset is only a route map.
+
+The original figure-eight centreline is retained (x = sin(t), y = 0.58 sin(t) cos(t)), rescaled to world coordinates. The elevated bridge clears the crossing at t=0. A second line leaves the right-hand loop at t=0.55 and rejoins it at t=2.59; its offset and tangent both reach zero at the turnouts. The **Branch** button sets the points for the next junction. The whole train follows that route, including both carriages.
+
+The user can switch between a follow camera (shows the locomotive model), driver view and raised overview. The game remains forgiving: there is no collision/failure state or scoring, and any ordinary letter key or a tap accelerates the train. Space sounds the whistle, B switches the points, and V changes the camera.
+
+The first 3D model is constructed from custom, low-polygon 3D geometry in \`train3d-model.mjs\` so it remains lightweight and needs no separately hosted assets. The engine and carriages can later be replaced with Blender-exported glTF/GLB artwork using Three.js \`GLTFLoader\`. A suitable external asset source is Kenney's CC0 Train Kit: https://kenney.nl/assets/train-kit
+
+**Important:** The 3D prototype must be served over HTTP(S) and requires an internet connection to load the pinned Three.js module. The existing 2D train and digger games remain independent and work as before.
+
+Development smoke check: \`npm run test:3d\` runs Node-based geometry, bridge and turnout tests without a browser. A full browser/WebGL visual test should also be run before making this prototype the default.
 
 ## Design Goals
 
@@ -67,7 +82,7 @@ Modifier shortcuts such as `Ctrl`, `Alt`, and `Meta` combinations are ignored so
 
 You can open `index.html` directly in a browser.
 
-You can also open `train.html` directly for the train game.
+You can also open `train.html` directly for the original train game. For the 3D version, use the local HTTP server and open `http://127.0.0.1:5173/train3d.html`.
 
 For the most browser-like local setup, serve the folder:
 
@@ -118,6 +133,12 @@ Run the Playwright tests:
 npm test
 ```
 
+Run the 3D track geometry checks:
+
+```bash
+npm run test:3d
+```
+
 The Playwright tests check keyboard play, button play, level progression, horse feeding, digger input buffering, digger alignment with the dirt track, and the train canvas/map behavior.
 
 ## Project Structure
@@ -125,6 +146,12 @@ The Playwright tests check keyboard play, button play, level progression, horse 
 ```text
 .
 ├── index.html                # Game markup
+├── train3d.html             # Standalone 3D train prototype
+├── train3d.css              # 3D game control layout and HUD
+├── train3d.mjs              # Three.js real-time scene, train motion and input
+├── train3d-track.mjs        # Original figure-eight and branch parametric geometry
+├── train3d-model.mjs        # Real 3D toy locomotive/carriage meshes
+├── train3d-world.mjs        # Rails, elevated bridge, stations and scenery
 ├── train.html                # Toy train game markup
 ├── styles.css                # Farm, digger, train, horses, and responsive visual styling
 ├── game.js                   # Gameplay loop, input handling, animation timing, and audio
