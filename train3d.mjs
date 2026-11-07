@@ -38,6 +38,8 @@ const state = {
   blinkTimer: 3.7,
   blinkRemaining: 0,
   modelFormat: "loading",
+  frameCount: 0,
+  renderCount: 0,
 };
 
 function showNotice(message, seconds = 2) {
@@ -371,11 +373,13 @@ async function start() {
   });
 
   function frame(timestamp) {
+    state.frameCount += 1;
     const dt = state.lastFrame ? Math.min(0.05, (timestamp - state.lastFrame) / 1000) : 0;
     state.lastFrame = timestamp;
     if (!document.hidden && !failureEl.hidden) {
       tick(dt);
       renderer.render(scene, camera);
+      state.renderCount += 1;
     }
     window.requestAnimationFrame(frame);
   }
@@ -393,6 +397,21 @@ async function start() {
         trackShape: "figure-eight",
         renderer: "three.js",
         modelFormat: state.modelFormat,
+      };
+    },
+    getDebug() {
+      const viewDirection = new THREE.Vector3();
+      camera.getWorldDirection(viewDirection);
+      const track = getTrackPose(state.angle, routeForCar(state.angle, state.branchTrip));
+      return {
+        frameCount: state.frameCount, renderCount: state.renderCount,
+        isHidden: document.hidden, fallbackHidden: failureEl.hidden,
+        camera: camera.position.toArray(), direction: viewDirection.toArray(),
+        cameraTarget: cameraTarget.toArray(), enginePosition: engine.group.position.toArray(),
+        sceneChildren: scene.children.length,
+        track, canvasWidth: canvas.width, canvasHeight: canvas.height,
+        sceneBackground: scene.background.getHexString(),
+        drawCalls: renderer.info.render.calls, triangles: renderer.info.render.triangles,
       };
     },
     boost, chooseBranch, changeCamera, whistle,
