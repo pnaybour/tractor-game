@@ -6,6 +6,10 @@ const FIGURE_EIGHT_Y_SCALE = 0.58;
 const BRIDGE_PARAM = 0;
 const BRIDGE_SPAN = 0.38;
 const BRIDGE_GRADE_STRENGTH = 0.55;
+// A second route runs outside the right-hand loop and joins the main line again.
+const BRANCH_START = 0.55;
+const BRANCH_END = 2.59;
+const BRANCH_OUTWARD = 0.47;
 
 const MAP_SIGNALS = [
   { param: 1.0, side: 1 },
@@ -21,6 +25,8 @@ const WAGON_OFFSETS = [0.34, 0.68];
 
 const state = {
   angle: -Math.PI / 2,
+  branchSelected: false,
+  branchTrip: false,
   audioContext: null,
   boostGlow: 0,
   chimneyTimer: 0,
@@ -34,11 +40,12 @@ const state = {
   particles: [],
   speed: 0,
   whistleCooldown: 0,
-  whistleMessageUntil: 0,
+  messageUntil: 0,
 };
 
 const elements = {
   actionButton: document.querySelector("[data-testid='train-action']"),
+  branchButton: document.querySelector("[data-testid='train-branch']"),
   driverCanvas: document.querySelector("[data-testid='driver-canvas']"),
   mapCanvas: document.querySelector("[data-testid='map-canvas']"),
   message: document.querySelector("[data-testid='train-message']"),
@@ -84,6 +91,44 @@ function getFigureEightPose(param, xScale = 1, yScale = 1) {
     dx,
     dy,
   };
+}
+
+function isBranchParam(param) {
+  const trackParam = normalizeParam(param);
+  return trackParam >= BRANCH_START && trackParam <= BRANCH_END;
+}
+
+// Both routes share position and heading at the turnouts, avoiding a jump.
+function getRoutePose(param, route = "main", xScale = 1, yScale = 1) {
+  const pose = getFigureEightPose(param, xScale, yScale);
+  if (route !== "branch" || !isBranchParam(pose.trackParam)) {
+    return pose;
+  }
+
+  const progress = (pose.trackParam - BRANCH_START) / (BRANCH_END - BRANCH_START);
+  const outward = Math.sin(Math.PI * progress);
+  const offset = BRANCH_OUTWARD * outward ** 2;
+  const slope = (BRANCH_OUTWARD * Math.PI * Math.sin(2 * Math.PI * progress)) / (BRANCH_END - BRANCH_START);
+  const dx = pose.dx + slope;
+
+  return {
+    ...pose,
+    bridgeAmount: 0,
+    x: pose.x + offset,
+    dx,
+    tangentAngle: Math.atan2(pose.dy * yScale, dx * xScale),
+  };
+}
+
+function willFollowBranch() {
+  // A turnout change after the train has passed it applies on the next lap.
+  return state.branchTrip || (state.branchSelected && !isBranchParam(state.angle));
+}
+
+function crossedParam(before, after, target) {
+  const travelled = normalizeParam(after - before);
+  const toTarget = normalizeParam(target - before);
+  return travelled > 0 && toTarget > 0 && toTarget <= travelled;
 }
 
 function getAudioContext() {
@@ -541,8 +586,9 @@ function getDriverTrackPoint(width, height, progress) {
   const horizon = height * 0.42;
   const depth = progress ** 1.55;
   const lookAhead = lerp(1.72, 0.06, progress);
-  const currentPose = getFigureEightPose(state.angle);
-  const samplePose = getFigureEightPose(state.angle + lookAhead);
+  const route = willFollowBranch() ? "branch" : "main";
+  const currentPose = getRoutePose(state.angle, route);
+  const samplePose = getRoutePose(state.angle + lookAhead, route);
   const deltaX = samplePose.x - currentPose.x;
   const deltaY = samplePose.y - currentPose.y;
   const heading = Math.atan2(currentPose.dy, currentPose.dx);
@@ -732,6 +778,14 @@ function drawToyScenery(context, width, height) {
     { param: 5.0, side: 1, color: "#ff7f35", shape: "block" },
     { param: 5.7, side: -1, shape: "signal" },
   ];
+
+  if (willFollowBranch()) {
+    props.push(
+      { param: 1.42, side: -1, color: "#2c9f5a", shape: "tree" },
+      { param: 1.92, side: 1, shape: "station" },
+      { param: 2.36, side: 1, color: "#f5bf3f", shape: "block" },
+    );
+  }
 
   const LOOK_MAX = 1.72;
   const LOOK_MIN = 0.06;
@@ -959,10 +1013,11 @@ function drawDriverView() {
   drawSmoke(context);
 }
 
-function getMapTrackPoint(width, height, param, offset = 0) {
-  const xScale = width * 0.34;
+function getMapTrackPoint(width, height, param, offset = 0, route = "main") {
+  // Leave space on the right for the branch line and its two junctions.
+  const xScale = width * 0.27;
   const yScale = height * 0.9;
-  const pose = getFigureEightPose(param, xScale, yScale);
+  const pose = getRoutePose(param, route, xScale, yScale);
   const normalX = -Math.sin(pose.tangentAngle);
   const normalY = Math.cos(pose.tangentAngle);
 
@@ -977,12 +1032,12 @@ function getMapTrackPoint(width, height, param, offset = 0) {
   };
 }
 
-function getMapPath(width, height, offset = 0, startParam = 0, endParam = TAU, samples = 220) {
+function getMapPath(width, height, offset = 0, startParam = 0, endParam = TAU, samples = 220, route = "main") {
   const points = [];
 
   for (let index = 0; index <= samples; index += 1) {
     const param = startParam + ((endParam - startParam) * index) / samples;
-    const point = getMapTrackPoint(width, height, param, offset);
+    const point = getMapTrackPoint(width, height, param, offset, route);
     points.push([point.x, point.y]);
   }
 
@@ -995,6 +1050,37 @@ function drawMapSleeper(context, point, length, width) {
   context.rotate(point.tangentAngle + Math.PI / 2);
   fillRoundedRect(context, -length / 2, -width / 2, length, width, width * 0.25, "#b87941");
   context.restore();
+}
+
+function drawMapBranch(context, width, height) {
+  const railOffset = width * 0.045;
+  for (let index = 0; index <= 38; index += 1) {
+    const param = lerp(BRANCH_START, BRANCH_END, index / 38);
+    drawMapSleeper(context, getMapTrackPoint(width, height, param, 0, "branch"), width * 0.13, width * 0.03);
+  }
+
+  const args = [width, height, 0, BRANCH_START, BRANCH_END, 130, "branch"];
+  strokePath(context, getMapPath(...args), width * 0.095, "rgba(85, 53, 31, 0.18)");
+  for (const offset of [-railOffset, railOffset]) {
+    const railPath = getMapPath(width, height, offset, BRANCH_START, BRANCH_END, 130, "branch");
+    strokePath(context, railPath, width * 0.035, "#7b5b3d");
+    strokePath(context, railPath, width * 0.014, "#e0be80");
+  }
+
+  const junction = getMapTrackPoint(width, height, BRANCH_START);
+  context.fillStyle = state.branchSelected ? "#51bc42" : "#f4cf70";
+  context.strokeStyle = "#4d3225";
+  context.lineWidth = Math.max(1, width * 0.012);
+  context.beginPath();
+  context.arc(junction.x, junction.y, width * 0.034, 0, TAU);
+  context.fill();
+  context.stroke();
+
+  context.fillStyle = "#274d30";
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.font = `bold ${Math.max(9, width * 0.068)}px sans-serif`;
+  context.fillText("Branch", width * 0.79, height * 0.13);
 }
 
 function drawMapBridge(context, width, height) {
@@ -1139,7 +1225,8 @@ function drawMapSpeedSign(context, width, height, param, side, limit) {
 }
 
 function drawMapTrainCar(context, width, height, param, options) {
-  const point = getMapTrackPoint(width, height, param);
+  const route = state.branchTrip && isBranchParam(param) ? "branch" : "main";
+  const point = getMapTrackPoint(width, height, param, 0, route);
 
   context.save();
   context.translate(point.x, point.y);
@@ -1200,6 +1287,7 @@ function drawTopDownMap() {
   strokePath(context, getMapPath(width, height, -railOffset), width * 0.014, "#e0be80");
   strokePath(context, getMapPath(width, height, railOffset), width * 0.014, "#e0be80");
 
+  drawMapBranch(context, width, height);
   drawMapBridge(context, width, height);
 
   drawMapStation(context, width, height);
@@ -1226,11 +1314,16 @@ function drawTopDownMap() {
   });
 }
 
+function showTrainNotice(message, duration = 1.6) {
+  state.messageUntil = performance.now() / 1000 + duration;
+  elements.message.textContent = message;
+}
+
 function updateSpeedReadout() {
   const speedValue = Math.round((state.speed / MAX_SPEED) * 9);
   elements.speed.textContent = String(speedValue);
 
-  if (performance.now() / 1000 < state.whistleMessageUntil) {
+  if (performance.now() / 1000 < state.messageUntil) {
     return;
   }
 
@@ -1241,6 +1334,13 @@ function updateSpeedReadout() {
   } else {
     elements.message.textContent = "Choo choo";
   }
+}
+
+function toggleBranchLine() {
+  state.branchSelected = !state.branchSelected;
+  elements.branchButton.setAttribute("aria-pressed", String(state.branchSelected));
+  elements.branchButton.textContent = state.branchSelected ? "Branch: ON" : "Branch: OFF";
+  showTrainNotice(state.branchSelected ? "Branch next junction!" : "Main line next junction!");
 }
 
 function boostTrain() {
@@ -1258,8 +1358,7 @@ function blowWhistle() {
     return;
   }
   state.whistleCooldown = now + 1.0;
-  state.whistleMessageUntil = now + 1.4;
-  elements.message.textContent = "Whoo whoo!";
+  showTrainNotice("Whoo whoo!", 1.4);
   playWhistleSound();
 }
 
@@ -1273,7 +1372,18 @@ function stepTrain(deltaSeconds) {
     state.speed = Math.max(0, state.speed - grade * BRIDGE_GRADE_STRENGTH * deltaSeconds);
   }
 
+  const previousAngle = state.angle;
   state.angle = normalizeParam(state.angle + state.speed * deltaSeconds);
+  if (crossedParam(previousAngle, state.angle, BRANCH_START)) {
+    state.branchTrip = state.branchSelected;
+    if (state.branchTrip) {
+      showTrainNotice("On the branch line!");
+    }
+  }
+  if (state.branchTrip && crossedParam(previousAngle, state.angle, BRANCH_END + WAGON_OFFSETS.at(-1))) {
+    state.branchTrip = false;
+  }
+
   state.boostGlow = Math.max(0, state.boostGlow - deltaSeconds * 2.4);
 
   if (state.speed > 0.08) {
@@ -1312,6 +1422,11 @@ function handleKeydown(event) {
     return;
   }
 
+  // Let buttons and navigation links work with Enter and Space.
+  if ((event.key === "Enter" || event.key === " ") && event.target.closest?.("button, a")) {
+    return;
+  }
+
   event.preventDefault();
 
   if (event.code === "Space" || event.key === " ") {
@@ -1335,6 +1450,7 @@ function handleStagePointer(event) {
 window.addEventListener("keydown", handleKeydown);
 window.addEventListener("resize", resizeCanvases);
 elements.actionButton.addEventListener("click", boostTrain);
+elements.branchButton.addEventListener("click", toggleBranchLine);
 elements.stage.addEventListener("pointerdown", handleStagePointer);
 
 resizeCanvases();
@@ -1344,9 +1460,13 @@ window.requestAnimationFrame(drawFrame);
 
 window.trainGame = {
   boost: boostTrain,
+  toggleBranch: toggleBranchLine,
   getState() {
     return {
       angle: state.angle,
+      branchSelected: state.branchSelected,
+      branchTrip: state.branchTrip,
+      route: state.branchTrip && isBranchParam(state.angle) ? "branch" : "main",
       bridge: true,
       speed: state.speed,
       trackShape: "figure-eight",
