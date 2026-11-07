@@ -5,9 +5,9 @@ import {
 } from "./train3d-track.mjs";
 
 const brown = new THREE.MeshStandardMaterial({ color: 0x94603b, roughness: 0.82 });
-const sleepers = new THREE.MeshStandardMaterial({ color: 0xc79153, roughness: 0.78 });
-const railWood = new THREE.MeshStandardMaterial({ color: 0x79502e, roughness: 0.65 });
-const railTop = new THREE.MeshStandardMaterial({ color: 0xe9c28c, roughness: 0.46 });
+const sleepers = new THREE.MeshStandardMaterial({ color: 0x98734f, roughness: 0.84 });
+const railWood = new THREE.MeshStandardMaterial({ color: 0x555f67, roughness: 0.58, metalness: 0.32 });
+const railTop = new THREE.MeshStandardMaterial({ color: 0xc2cbd2, roughness: 0.38, metalness: 0.48 });
 const grass = new THREE.MeshStandardMaterial({ color: 0x84c76d, roughness: 0.95 });
 const darkGreen = new THREE.MeshStandardMaterial({ color: 0x367b46, roughness: 0.93 });
 const leafGreen = new THREE.MeshStandardMaterial({ color: 0x58b36a, roughness: 0.89 });
@@ -82,18 +82,20 @@ function drawRails(group, route) {
 }
 
 function drawBridge(group) {
-  // The rail at parameter 0 is physically above the rail at PI.
+  // A light stone toy bridge supports the line over the figure-eight crossing.
+  const stone = new THREE.MeshStandardMaterial({color:0xcbbb9f,roughness:0.96});
+  const shadowStone = new THREE.MeshStandardMaterial({color:0x998978,roughness:0.96});
   for (let i = 0; i < 20; i++) {
     const t = -0.43 + i * 0.044;
     const p = getTrackPose(t);
-    const deck = block(group, p.x, p.y - 0.22, p.z, 3.85, 0.35, 1.75, sleepers);
+    const deck = block(group, p.x, p.y - 0.22, p.z, 3.85, 0.35, 1.75, stone);
     deck.rotation.y = p.heading;
   }
   for (const t of [-0.28, -0.12, 0.12, 0.28]) {
     const p = getTrackPose(t);
     const height = Math.max(0.2, bridgeLift(t) - 0.1);
     for (const side of [-1.55, 1.55]) {
-      const post = block(group, p.x + Math.cos(p.heading) * side, height / 2, p.z - Math.sin(p.heading) * side, 0.42, height, 0.42, brown);
+      const post = block(group, p.x + Math.cos(p.heading) * side, height / 2, p.z - Math.sin(p.heading) * side, 0.42, height, 0.42, shadowStone);
       post.rotation.y = p.heading;
     }
   }
