@@ -65,3 +65,61 @@ test("storybook 3D train loads glTF assets and operates the points", async ({ pa
   expect(distinctSceneColours).toBeGreaterThan(8);
   expect(errors).toEqual([]);
 });
+
+
+test("all unassigned keys accelerate the 3D train while assigned keys retain their functions", async ({ page }) => {
+  await page.goto("http://127.0.0.1:5173/train3d.html", { waitUntil: "domcontentloaded" });
+  await expect.poll(
+    () => page.evaluate(() => window.train3D?.getState().modelFormat || "loading"),
+    { timeout: 25_000 },
+  ).toBe("gltf");
+
+  // Previously ignored keys now do exactly the same thing as GO.
+  const goKeys = [
+    "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight",
+    "Backspace", "Delete", "Home", "End", "PageDown", "Escape",
+    "1", "Q", "Enter", "Shift",
+  ];
+  for (const key of goKeys) {
+    const before = await page.evaluate(() => window.train3D.getState().boostCount);
+    await page.keyboard.press(key);
+    expect(await page.evaluate(() => window.train3D.getState().boostCount),
+      key + " should operate GO").toBe(before + 1);
+  }
+
+  const beforeSpecialKeys = await page.evaluate(() => window.train3D.getState().boostCount);
+  await page.keyboard.press("b");
+  await expect(page.getByTestId("train3d-branch")).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("v");
+  expect(await page.evaluate(() => window.train3D.getState().view)).toBe("driver");
+  await page.keyboard.press("Space");
+  await expect(page.getByTestId("train3d-message")).toContainText("Whoo whoo");
+  expect(await page.evaluate(() => window.train3D.getState().boostCount)).toBe(beforeSpecialKeys);
+
+  // Leave browser keyboard navigation and system shortcuts intact.
+  await page.keyboard.press("Tab");
+  expect(await page.evaluate(() => window.train3D.getState().boostCount)).toBe(beforeSpecialKeys);
+  await page.evaluate(() => {
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "p", ctrlKey: true, cancelable: true }));
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "F5", cancelable: true }));
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", repeat: true, cancelable: true }));
+  });
+  expect(await page.evaluate(() => window.train3D.getState().boostCount)).toBe(beforeSpecialKeys);
+
+  // An unassigned key still operates GO if a navigation link has focus.
+  await page.locator(".topbar nav a").first().focus();
+  await page.keyboard.press("ArrowUp");
+  expect(await page.evaluate(() => window.train3D.getState().boostCount)).toBe(beforeSpecialKeys + 1);
+
+  // Enter/Space still activate the focused on-screen controls normally.
+  await page.getByTestId("train3d-go").focus();
+  await page.keyboard.press("Enter");
+  expect(await page.evaluate(() => window.train3D.getState().boostCount)).toBe(beforeSpecialKeys + 2);
+  await page.keyboard.press("Space");
+  expect(await page.evaluate(() => window.train3D.getState().boostCount)).toBe(beforeSpecialKeys + 3);
+
+  await page.getByTestId("train3d-branch").focus();
+  await page.keyboard.press("Space");
+  await expect(page.getByTestId("train3d-branch")).toHaveAttribute("aria-pressed", "false");
+  expect(await page.evaluate(() => window.train3D.getState().boostCount)).toBe(beforeSpecialKeys + 3);
+});

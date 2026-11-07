@@ -39,7 +39,7 @@ The optional 3D prototype at `train3d.html` uses **Three.js 0.187.0** via a pinn
 
 The original figure-eight centreline is retained (x = sin(t), y = 0.58 sin(t) cos(t)), rescaled to world coordinates. The elevated bridge clears the crossing at t=0. A second line leaves the right-hand loop at t=0.55 and rejoins it at t=2.59; its offset and tangent both reach zero at the turnouts. The **Branch** button sets the points for the next junction. The whole train follows that route, including both carriages.
 
-The user can switch between a follow camera (shows the locomotive model), driver view and raised overview. The game remains forgiving: there is no collision/failure state or scoring, and any ordinary letter key or a tap accelerates the train. Space sounds the whistle, B switches the points, and V changes the camera.
+The user can switch between a follow camera (shows the locomotive model), driver view and raised overview. The game remains forgiving: there is no collision/failure state or scoring. In the 3D game, **Space** sounds the whistle, **B** switches the points and **V** changes the camera. **Every other unassigned key operates GO**, including letters, numbers, arrow keys, Backspace, Delete and Enter. A tap on the game or the GO button also accelerates. Tab, function keys, Ctrl/Alt/Meta shortcuts and editing fields retain their normal browser behaviour. Enter or Space on a focused control activates that control rather than triggering the global shortcut.
 
 The storybook locomotive and coaches are stored as self-contained glTF assets in `assets/models/`. They were designed for this game, so there is no dependency on third-party character artwork.
 
