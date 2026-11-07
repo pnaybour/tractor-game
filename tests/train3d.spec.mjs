@@ -123,3 +123,34 @@ test("all unassigned keys accelerate the 3D train while assigned keys retain the
   await expect(page.getByTestId("train3d-branch")).toHaveAttribute("aria-pressed", "false");
   expect(await page.evaluate(() => window.train3D.getState().boostCount)).toBe(beforeSpecialKeys + 3);
 });
+
+
+test("raised driver view and Bluebell Halt station render in the extended branch world", async ({ page }, testInfo) => {
+  const errors = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.goto("http://127.0.0.1:5173/train3d.html", { waitUntil: "domcontentloaded" });
+  await expect.poll(
+    () => page.evaluate(() => window.train3D?.getState().modelFormat || "loading"),
+    { timeout: 25_000 },
+  ).toBe("gltf");
+
+  const scene = await page.evaluate(() => window.train3D.getDebug());
+  expect(scene.stationPresent).toBe(true);
+  expect(scene.branchLength).toBeGreaterThan(65);
+
+  // The driver's eye level has been raised without changing the other views.
+  await page.getByTestId("train3d-view").click();
+  await expect.poll(() => page.evaluate(() => window.train3D.getState().view)).toBe("driver");
+  const driver = await page.evaluate(() => window.train3D.getDebug());
+  expect(driver.camera[1] - driver.enginePosition[1]).toBeGreaterThan(3.0);
+
+  // The overview should show the full railway including its longer branch.
+  await page.getByTestId("train3d-view").click();
+  await expect.poll(() => page.evaluate(() => window.train3D.getState().view)).toBe("overview");
+  await page.getByTestId("train3d-branch").click();
+  await page.waitForTimeout(650);
+  const overview = await page.evaluate(() => window.train3D.getDebug());
+  expect(overview.renderCount).toBeGreaterThan(4);
+  await page.screenshot({ path: testInfo.outputPath("extended-branch-bluebell-halt.png") });
+  expect(errors).toEqual([]);
+});
